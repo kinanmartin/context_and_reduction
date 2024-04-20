@@ -48,10 +48,18 @@ def explode_cliffhanger(cliffhanger_df, output_df):
     cliffhanger_exploded["position_in_turn"] = cliffhanger_exploded.groupby("turn_id").cumcount()
     return cliffhanger_exploded
 
-if __name__ == '__main__':
-    convo_path = Path('../data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
+def make_df_from_convo_path(convo_path, out_path=None, save_type='pickle'):
     cliffhanger_df = load_transcribe_cliffhanger(convo_path)
     output_df = load_transcript_output(convo_path)
     cliffhanger_exploded = explode_cliffhanger(cliffhanger_df, output_df)
-    out_path = Path('../data/candor/exploded/')
-    cliffhanger_exploded.to_csv(out_path / 'sample.pkl')
+    if out_path is not None:
+        if save_type == 'pickle':
+            cliffhanger_exploded.to_pickle(out_path / (convo_path.name + '.pickle'))
+        elif save_type == 'csv':
+            cliffhanger_exploded.to_csv(out_path / (convo_path.name + '.csv'))
+    return cliffhanger_exploded
+
+if __name__ == '__main__':
+    convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
+    out_path = Path('data/candor/exploded/')
+    make_df_from_convo_path(convo_path, out_path, save_type='csv')
