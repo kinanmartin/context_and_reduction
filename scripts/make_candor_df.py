@@ -62,4 +62,4 @@ def make_df_from_convo_path(convo_path, out_path=None, save_type='pickle'):
 if __name__ == '__main__':
     convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
     out_path = Path('data/candor/exploded/')
-    make_df_from_convo_path(convo_path, out_path, save_type='csv')
+    candor_df = make_df_from_convo_path(convo_path, out_path, save_type='csv')
