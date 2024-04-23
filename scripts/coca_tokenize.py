@@ -30,7 +30,7 @@ def tokenize_data(dataset_dict, tokenizer):
 
 if __name__ == '__main__':
 
-    coca_dir = "../data/coca_spoken/text_chunk_cleaned/"
+    coca_dir = "data/coca_spoken/text_bigram_cleaned/"
 
     coca_dsdict = load_data_in_splits(coca_dir, .8, .1, .1)
 
@@ -45,12 +45,13 @@ if __name__ == '__main__':
     print("UNK token:", tokenizer.unk_token, tokenizer.unk_token_id)
     print("Special tokens:", tokenizer.all_special_tokens)
 
-    tokenized_data_path = '../data/coca_spoken/tokens_chunk/'
+    # assert False
+    tokenized_data_path = 'data/coca_spoken/tokens_bigram/'
 
-    retokenize = False
+    retokenize = True
     if retokenize:
         # Tokenize from data and save:
-        encoded_datasets = tokenize_data(coca_dsdict)
+        encoded_datasets = tokenize_data(coca_dsdict, tokenizer)
 
         encoded_datasets.save_to_disk(tokenized_data_path)
 

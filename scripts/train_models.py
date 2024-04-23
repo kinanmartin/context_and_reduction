@@ -18,11 +18,11 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
     # parser.add_argument("--input_data_dir")
+    # parser.add_argument("--need_to_tokenize")
     parser.add_argument("--tokenized_data_dir")
     parser.add_argument("--model_dir")
     parser.add_argument("--eval", default=False)
     parser.add_argument("--from_pretrained", default=None)
-    # parser.add_argument("--need_to_tokenize")
     parser.add_argument("--context_size", default=None)
     parser.add_argument("--context_direction", default='left')
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         model.eval()
 
     # Load tokenizer
-    tokenizer = load_pretrained_tokenizer(args.context)
+    tokenizer = load_pretrained_tokenizer(args.context_size)
 
     # Create data collator
     data_collator = init_data_collator(args.context_direction)
