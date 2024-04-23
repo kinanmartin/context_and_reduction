@@ -2,7 +2,6 @@ from tqdm import tqdm
 from datasets import load_dataset, DatasetDict, load_from_disk
 from transformers import GPT2TokenizerFast
 from utils import load_pretrained_tokenizer
-import random
 
 def load_data_in_splits(data_dir, train=0.8, val=0.1, test=0.1):
     data = load_dataset(data_dir)
@@ -63,6 +62,8 @@ if __name__ == '__main__':
     print(encoded_datasets['train'][0])
 
     tokenized_datasets = encoded_datasets.remove_columns(['text'])
+
+    # import random
 
     # print(coca_dsdict['train'].column_names)
     # for split in ['train', 'val', 'test']:
