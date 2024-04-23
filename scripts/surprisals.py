@@ -1,21 +1,8 @@
 import torch
 from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+from utils import load_pretrained_model, load_pretrained_tokenizer
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-def load_pretrained_model(pretrained_model_name_or_path):
-    model = GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path)
-    model.to(device)
-    model.eval()
-    return model
-
-def load_pretrained_tokenizer(pretrained_model_name_or_path):
-    tokenizer = GPT2TokenizerFast.from_pretrained(
-        pretrained_model_name_or_path, 
-        add_prefix_space=True, # ?
-    )
-    tokenizer.pad_token = tokenizer.eos_token # ?
-    return tokenizer
 
 def tokenize_cliffhanger_turn(text, tokenizer):
     text = text.split(' ')

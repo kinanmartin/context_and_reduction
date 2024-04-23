@@ -30,6 +30,6 @@ if __name__ == "__main__":
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
     # Load (pre)tokenized data
-    TOKENIZE = sys.argv[0]
-    if TOKENIZE: 
-        pass
+    # TOKENIZE = sys.argv[0]
+    # if TOKENIZE: 
+    #     pass
