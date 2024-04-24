@@ -46,18 +46,19 @@ if __name__ == "__main__":
 
     args = TrainingArguments(
         args.model_dir,
-        per_device_train_batch_size=32, # change to fit GPU specs
-        per_device_eval_batch_size=32,
+        # per_device_train_batch_size=32, # change to fit GPU specs
+        # per_device_eval_batch_size=32,
+        auto_find_batch_size=True,
         evaluation_strategy='epoch',
-        eval_steps=0.25,
+        eval_steps=1,
         logging_steps=0.25,
         save_strategy='epoch',
         save_steps=0.25,
         group_by_length=True, # bucketing
-        load_best_model_at_end=True,
-        metric_for_best_model='loss',
+        # load_best_model_at_end=True,
+        # metric_for_best_model='loss',
         greater_is_better=False,
-        save_total_limit=3,
+        save_total_limit=4,
         num_train_epochs=1,
     )
 
