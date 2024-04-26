@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--tokenized_data_dir")
     parser.add_argument("--model_dir")
     parser.add_argument("--eval", default=False)
-    parser.add_argument("--from_pretrained", default=None)
+    parser.add_argument("--from_pretrained", default=False)
     parser.add_argument("--context_size", default=None)
     parser.add_argument("--context_direction", default='left')
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # Init/load model
     if args.from_pretrained:
-        model = load_pretrained_model(args.from_pretrained)
+        model = load_pretrained_model(args.model_dir)
     else:
         model = init_model(args.context_size)
 
@@ -39,47 +39,52 @@ if __name__ == "__main__":
         model.eval()
 
     # Load tokenizer
-    tokenizer = load_pretrained_tokenizer(args.context_size)
+    tokenizer = load_pretrained_tokenizer('gpt2', context=args.context_size)
 
     # Create data collator
-    data_collator = init_data_collator(args.context_direction)
+    data_collator = init_data_collator(tokenizer, args.context_direction)
 
-    args = TrainingArguments(
+    train_args = TrainingArguments(
         args.model_dir,
-        # per_device_train_batch_size=32, # change to fit GPU specs
-        # per_device_eval_batch_size=32,
-        auto_find_batch_size=True,
+        per_device_train_batch_size=32, # change to fit GPU specs
+        per_device_eval_batch_size=32,
+        # auto_find_batch_size=True,
         evaluation_strategy='epoch',
         eval_steps=1,
-        logging_steps=0.25,
+        logging_steps=0.01,
         save_strategy='epoch',
         save_steps=0.25,
-        group_by_length=True, # bucketing
+        # group_by_length=True, # bucketing
         # load_best_model_at_end=True,
         # metric_for_best_model='loss',
-        greater_is_better=False,
-        save_total_limit=4,
+        # greater_is_better=False,
+        save_total_limit=5,
         num_train_epochs=1,
     )
+    print(train_args.device)
 
+    print(f'Loading {args.tokenized_data_dir=}...')
     tokenized_dataset_dict = load_from_disk(args.tokenized_data_dir)
-    tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['text'])
+    # print('Removing "text" column...')
+    # tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['text'])
+    print('...done')
 
     if not args.eval:
         trainer = Trainer(
             model=model,
             tokenizer=tokenizer,
-            args=args,
+            args=train_args,
             data_collator=data_collator,
             train_dataset=tokenized_dataset_dict['train'],
             eval_dataset=tokenized_dataset_dict['val'],
         )
 
-        trainer.train(
-            resume_from_checkpoint=args.from_pretrained
-        )
-    else:
-        pass
+        if not args.from_pretrained:
+            trainer.train()
+        else:
+            trainer.train(
+                resume_from_checkpoint=args.model_dir
+            )
 
 
     

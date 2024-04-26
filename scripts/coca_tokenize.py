@@ -4,6 +4,7 @@ from transformers import GPT2TokenizerFast
 from utils import load_pretrained_tokenizer
 
 def load_data_in_splits(data_dir, train=0.8, val=0.1, test=0.1):
+    print(f'Loading data from {data_dir} (split ratios {(train, val, test)})...')
     data = load_dataset(data_dir)
     train_valtest = data['train'].train_test_split(test_size = 1 - train)
     test_valid = train_valtest['test'].train_test_split(test_size = test / (val + test))
@@ -12,9 +13,11 @@ def load_data_in_splits(data_dir, train=0.8, val=0.1, test=0.1):
             'val': test_valid['train'],
             'test': test_valid['test']
         })
+    print('...done')
     return out
 
 def tokenize_data(dataset_dict, tokenizer):
+    print('Tokenizing dataset_dict with tokenizer...')
     encoded_datasets = dataset_dict.map(
         lambda x: tokenizer(
             x['text'],
@@ -24,16 +27,14 @@ def tokenize_data(dataset_dict, tokenizer):
             # return_length=True,
             ), 
         batched=True)
+    print('...done')
     return encoded_datasets
 
 
 
 if __name__ == '__main__':
 
-    coca_dir = "data/coca_spoken/text_bigram_cleaned/"
-
-    coca_dsdict = load_data_in_splits(coca_dir, .8, .1, .1)
-
+    # tokenizer = load_pretrained_tokenizer('gpt2')
     tokenizer = load_pretrained_tokenizer('gpt2', context='bigram')
 
     print("Vocabulary size:", tokenizer.vocab_size)
@@ -46,10 +47,13 @@ if __name__ == '__main__':
     print("Special tokens:", tokenizer.all_special_tokens)
 
     # assert False
-    tokenized_data_path = 'data/coca_spoken/tokens_bigram/'
+    tokenized_data_path = 'data/coca_spoken/tokens_sentence/'
 
-    retokenize = True
+    retokenize = False
     if retokenize:
+        coca_dir = "data/coca_spoken/text_sentence_cleaned/"
+
+        coca_dsdict = load_data_in_splits(coca_dir, .8, .1, .1)
         # Tokenize from data and save:
         encoded_datasets = tokenize_data(coca_dsdict, tokenizer)
 
@@ -57,12 +61,16 @@ if __name__ == '__main__':
 
     else:
         # Load pretokenized data:
+        # print('loading pretokenized data')
         encoded_datasets = load_from_disk(tokenized_data_path)
+        # print('done')
 
     print(encoded_datasets)
     print(encoded_datasets['train'][0])
 
     tokenized_datasets = encoded_datasets.remove_columns(['text'])
+
+    print(encoded_datasets['train'][0:11])
 
     # import random
 

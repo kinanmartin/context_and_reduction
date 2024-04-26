@@ -3,21 +3,28 @@ from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast, DataCol
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def init_model(context=None):
+    print(f'Initializing model with context_size {context}...')
     if context == 'bigram':
-        configuration = GPT2Config(n_positions=2)
+        # configuration = GPT2Config(n_positions=8)
+        configuration = GPT2Config()
     else:
         configuration = GPT2Config()
     model = GPT2LMHeadModel(configuration)
+    print('...done')
+    print(model.config)
     return model
 
 def load_pretrained_model(pretrained_model_name_or_path):
+    print(f'Loading pretrained model from {pretrained_model_name_or_path}...')
     model = GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path)
+    print('...done')
     return model
 
 def load_pretrained_tokenizer(pretrained_model_name_or_path, context=None):
+    print(f'Loading pretrained tokenizer from {pretrained_model_name_or_path}...')
     tokenizer = GPT2TokenizerFast.from_pretrained(
         pretrained_model_name_or_path, 
-        add_prefix_space=True, # ?
+        # add_prefix_space=True, # ?
     )
 
     if context == 'bigram':
@@ -25,6 +32,15 @@ def load_pretrained_tokenizer(pretrained_model_name_or_path, context=None):
         tokenizer.eos_token = '</s>'
 
     tokenizer.pad_token = tokenizer.eos_token # ?
+    print("Vocabulary size:", tokenizer.vocab_size)
+    print("Max Model Input Sizes:", tokenizer.model_max_length)
+    print("BOS token:", tokenizer.bos_token, tokenizer.bos_token_id)
+    print("EOS token:", tokenizer.eos_token, tokenizer.eos_token_id)
+    print("PAD token:", tokenizer.pad_token, tokenizer.pad_token_id)
+    print("SEP token:", tokenizer.sep_token, tokenizer.sep_token_id)
+    print("UNK token:", tokenizer.unk_token, tokenizer.unk_token_id)
+    print("Special tokens:", tokenizer.all_special_tokens)
+    print('...done')
     return tokenizer
 
 class ReverseSequenceDataCollator(DataCollatorForLanguageModeling):
@@ -99,17 +115,19 @@ class BidirectionalInfillingDataCollator(DataCollatorForLanguageModeling):
         return batch
         # return super().__call__(features, return_tensors)
 
-def init_data_collator(context_direction='left'):
+def init_data_collator(tokenizer, context_direction='left'):
+    print(f'Initializing data collator with {context_direction=}...')
     if context_direction == 'left':
         data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
     elif context_direction == 'right':
         data_collator = ReverseSequenceDataCollator(tokenizer, mlm=False)
     elif context_direction == 'bidi':
         data_collator = BidirectionalInfillingDataCollator(tokenizer, mlm=False)
+    print('...done')
     return data_collator
 
 if __name__ == "__main__":
     model = load_pretrained_model('gpt2')
     tokenizer = load_pretrained_tokenizer('gpt2')
-    data_collator = init_data_collator('left')
+    data_collator = init_data_collator(tokenizer, 'left')
 
