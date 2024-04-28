@@ -15,6 +15,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(torch.cuda.get_device_name(0))
 
 if __name__ == "__main__":
+    from datasets import disable_caching
+    disable_caching()
+
     from argparse import ArgumentParser
     parser = ArgumentParser()
     # parser.add_argument("--input_data_dir")
@@ -46,15 +49,15 @@ if __name__ == "__main__":
 
     train_args = TrainingArguments(
         args.model_dir,
-        per_device_train_batch_size=32, # change to fit GPU specs
-        per_device_eval_batch_size=32,
+        per_device_train_batch_size=1024, # change to fit GPU specs
+        per_device_eval_batch_size=1024,
         # auto_find_batch_size=True,
         evaluation_strategy='epoch',
         eval_steps=1,
         logging_steps=0.01,
         save_strategy='epoch',
         save_steps=0.25,
-        # group_by_length=True, # bucketing
+        group_by_length=True, # bucketing
         # load_best_model_at_end=True,
         # metric_for_best_model='loss',
         # greater_is_better=False,
@@ -64,6 +67,8 @@ if __name__ == "__main__":
     print(train_args.device)
 
     print(f'Loading {args.tokenized_data_dir=}...')
+    # load_from_disk loads data to a CACHE whose default location is ~/.cache/huggingface/datasets .
+    # This is causing a data overflow on openmind!!
     tokenized_dataset_dict = load_from_disk(args.tokenized_data_dir)
     # print('Removing "text" column...')
     # tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['text'])
