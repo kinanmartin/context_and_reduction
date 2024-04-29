@@ -20,11 +20,11 @@ def load_pretrained_model(pretrained_model_name_or_path):
     print('...done')
     return model
 
-def load_pretrained_tokenizer(pretrained_model_name_or_path, context=None):
+def load_pretrained_tokenizer(pretrained_model_name_or_path, context=None, add_prefix_space=False):
     print(f'Loading pretrained tokenizer from {pretrained_model_name_or_path}...')
     tokenizer = GPT2TokenizerFast.from_pretrained(
         pretrained_model_name_or_path, 
-        # add_prefix_space=True, # ?
+        add_prefix_space=add_prefix_space, #?
     )
 
     if context == 'bigram':

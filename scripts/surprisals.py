@@ -13,6 +13,7 @@ def tokenize_cliffhanger_turn(text, tokenizer):
         add_special_tokens=True,
         is_split_into_words=True, 
     )
+    # print(inputs)
     # for i, word in enumerate(text):
     #     print(f'{word=}, {inputs.word_to_tokens(i)}') 
     return inputs
@@ -62,7 +63,7 @@ def aggregate_surprisal_by_word(inputs, surprisals):
     Aggregate (add) surprisals of tokens which come
     from the same word
     """
-    inputs_words = inputs.words()
+    inputs_words = inputs.word_ids()
     n_words = (inputs_words[-1] + 1) # better way?
     # print(n_words, len(inputs_words), len(surprisals))
     surprisals_by_word = [0] * n_words
@@ -75,9 +76,10 @@ def aggregate_surprisal_by_word(inputs, surprisals):
 
 if __name__ == '__main__':
     model = load_pretrained_model('gpt2')
-    tokenizer = load_pretrained_tokenizer('gpt2')
+    tokenizer = load_pretrained_tokenizer('gpt2', add_prefix_space=True)
     
-    text = "That's awesome. When I, like the last time I was in Wisconsin was like several years ago and one of the best meals that I had, there was actually at a fish fry, like a friday night fish fry. This place called the serb hall in Milwaukee and it was like the strangest environment to eaten ever. It was like very large event hall and all of the wait staff were like wearing very formal suits and tuxedos, But like the dress code of the actual people eating, there was very relaxed and when I say 40% of the people were wearing like exactly what you're wearing. I am not exaggerating. And so you were surrounded by like wait staff wearing like either tuxedos are very formal suits and then like green bay packers gear as far as the eye can see and the Munich selection ranged from like Sarah McLachlan to traditional Serbian folk music and like it was, it was very strange but the food was incredible and they also had like spotted cow as well too. So I had as much spotted cow because we don't have that in Iowa. So I was drinking as much spotted how could possibly consume and as much fried fish and I'm still chasing that high because that was so are the best food I have ever had. And so I don't know, I just want to say Wisconsin, I about to your prowess of making incredible fried fish. Um So yeah, I don't know. I don't know why. I just looked like, like I said, really, I cannot stop thinking about that meal. It's like every couple of months man, like, you know, it was really good."
+    # text = "That's awesome. When I, like the last time I was in Wisconsin was like several years ago and one of the best meals that I had, there was actually at a fish fry, like a friday night fish fry. This place called the serb hall in Milwaukee and it was like the strangest environment to eaten ever. It was like very large event hall and all of the wait staff were like wearing very formal suits and tuxedos, But like the dress code of the actual people eating, there was very relaxed and when I say 40% of the people were wearing like exactly what you're wearing. I am not exaggerating. And so you were surrounded by like wait staff wearing like either tuxedos are very formal suits and then like green bay packers gear as far as the eye can see and the Munich selection ranged from like Sarah McLachlan to traditional Serbian folk music and like it was, it was very strange but the food was incredible and they also had like spotted cow as well too. So I had as much spotted cow because we don't have that in Iowa. So I was drinking as much spotted how could possibly consume and as much fried fish and I'm still chasing that high because that was so are the best food I have ever had. And so I don't know, I just want to say Wisconsin, I about to your prowess of making incredible fried fish. Um So yeah, I don't know. I don't know why. I just looked like, like I said, really, I cannot stop thinking about that meal. It's like every couple of months man, like, you know, it was really good."
+    text = "That's awesome. I really like it."
     inputs = tokenize_cliffhanger_turn(text, tokenizer)
     surprisals = calculate_surprisal(inputs, model)
     surprisals_by_word = aggregate_surprisal_by_word(inputs, surprisals)
