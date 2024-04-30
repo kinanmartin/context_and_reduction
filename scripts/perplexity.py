@@ -19,6 +19,8 @@ def calculate_perplexity(model, dataset):
         for example in tqdm(dataset):
             input_ids = torch.tensor(example['input_ids']).unsqueeze(0).to(model.device)
             attention_mask = torch.tensor(example['attention_mask']).unsqueeze(0).to(model.device)
+            if input_ids.size() == 0:
+                continue
             
             outputs = model(input_ids, labels=input_ids, attention_mask=attention_mask)
             logits = outputs.logits[:, :-1, :].contiguous()
