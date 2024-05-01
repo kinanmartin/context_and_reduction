@@ -22,7 +22,10 @@ def calculate_perplexity(model, dataset):
             if input_ids.size() == 0:
                 continue
             
-            outputs = model(input_ids, labels=input_ids, attention_mask=attention_mask)
+            try:
+                outputs = model(input_ids, labels=input_ids, attention_mask=attention_mask)
+            except:
+                continue
             logits = outputs.logits[:, :-1, :].contiguous()
             labels = input_ids[:, 1:].contiguous()
 
