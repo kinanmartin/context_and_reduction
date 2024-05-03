@@ -57,7 +57,7 @@ if __name__ == "__main__":
         logging_steps=0.01,
         save_strategy='epoch',
         save_steps=0.25,
-        group_by_length=True, # bucketing
+        group_by_length=True if args.context_direction != 'bidi' else False,
         # load_best_model_at_end=True,
         # metric_for_best_model='loss',
         # greater_is_better=False,
@@ -66,13 +66,11 @@ if __name__ == "__main__":
     )
     print(train_args.device)
 
-    print(f'Loading {args.tokenized_data_dir=}...')
-    # load_from_disk loads data to a CACHE whose default location is ~/.cache/huggingface/datasets .
-    # This is causing a data overflow on openmind!!
-    tokenized_dataset_dict = load_from_disk(args.tokenized_data_dir)
-    # print('Removing "text" column...')
-    # tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['text'])
-    print('...done')
+    tokenized_dataset_dict = load_datasetdict(
+        args.tokenized_data_dir,
+        args.context_direction,
+        disable_cache=True
+    )
 
     if not args.eval:
         trainer = Trainer(
