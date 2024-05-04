@@ -1,7 +1,8 @@
 import torch
-from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast, DataCollatorForLanguageModeling
+from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast, DataCollatorForLanguageModeling, DataCollatorWithPadding, DefaultDataCollator
 from datasets import load_from_disk, disable_caching, IterableDataset, IterableDatasetDict
 device = "cuda" if torch.cuda.is_available() else "cpu"
+import types, collections
 
 def init_model(context=None):
     print(f'Initializing model with context_size {context}...')
@@ -15,7 +16,7 @@ def init_model(context=None):
     print(model.config)
     return model
 
-def load_datasetdict(tokenized_data_dir, context_direction='left', disable_cache=True):
+def load_datasetdict(tokenized_data_dir, tokenizer, context_direction='left', disable_cache=True):
     print(f'Loading {tokenized_data_dir=}...')
     if disable_cache:
         print('...disabling cache while loading dataset...')
@@ -25,7 +26,7 @@ def load_datasetdict(tokenized_data_dir, context_direction='left', disable_cache
         print('...done\n')
         return tokenized_dataset_dict
     else:
-        bidi_tokenized_dataset_dict = make_bidi_iterabledatasetdict(tokenized_dataset_dict)
+        bidi_tokenized_dataset_dict = make_bidi_iterabledatasetdict(tokenized_dataset_dict, tokenizer)
         print('...done\n')
         return bidi_tokenized_dataset_dict
     
@@ -96,8 +97,13 @@ def bidi_expand(example, tokenizer):
             'attention_mask': bidi_attention_mask,
             'labels': bidi_labels
         }
+        # print(example)
+        # print()
+        # print(bidi_input)
+        # print()
+        # print()
 
-        # assert len(bidi_input_ids) == len(bidi_attention_mask) == len(bidi_labels)
+        assert len(bidi_input_ids) == len(bidi_attention_mask) == len(bidi_labels)
         yield bidi_input
 
 def gen_bidi_inputs(dataset, tokenizer):
@@ -105,12 +111,73 @@ def gen_bidi_inputs(dataset, tokenizer):
         yield from bidi_expand(example, tokenizer)
 
 def make_bidi_iterabledataset(dataset, tokenizer):
-    return IterableDataset.from_generator(gen_bidi_inputs, gen_kwargs={'dataset': dataset, 'tokenizer': tokenizer})
+    bidi_iterabledataset = IterableDataset.from_generator(gen_bidi_inputs, gen_kwargs={'dataset': dataset, 'tokenizer': tokenizer})
+    # print(type(bidi_iterabledataset))
+    length = calculate_bidi_dataset_length(dataset)
+    class BidiIterableDataset(IterableDataset):
+        def __len__(self):
+            return length
+        
+    bidi_iterabledataset.__class__ = BidiIterableDataset
+    # print(isinstance(bidi_iterabledataset, collections.abc.Sized))
+    return bidi_iterabledataset
+
+def calculate_bidi_dataset_length(dataset):
+    print('Calculating bidi dataset length...')
+    length = sum(len(example['input_ids']) for example in dataset)
+    print(f'...done ({length=})\n')
+    return length
+
+
+
+
+# def make_bidi_iterabledatasetdict(datasetdict, tokenizer):
+#     bidi_iterabledatasetdict = IterableDatasetDict({
+#         split: BidiIterableDataset(dataset, tokenizer) for split, dataset in datasetdict.items()
+#     })
+#     print(bidi_iterabledatasetdict)
+#     print(bidi_iterabledatasetdict['train'])
+#     print(bidi_iterabledatasetdict['train'].__len__)
+#     print(bidi_iterabledatasetdict['train'].__len__())
+#     return bidi_iterabledatasetdict
 
 def make_bidi_iterabledatasetdict(datasetdict, tokenizer):
-    return IterableDatasetDict({
+    bidi_iterabledatasetdict = IterableDatasetDict({
         split: make_bidi_iterabledataset(dataset, tokenizer) for split, dataset in datasetdict.items()
     })
+    # print(bidi_iterabledatasetdict)
+    # print(bidi_iterabledatasetdict['train'])
+    # print(bidi_iterabledatasetdict['train'].__len__)
+    # print(bidi_iterabledatasetdict['train'].__len__())
+    return bidi_iterabledatasetdict
+
+# def make_bidi_iterabledataset(dataset, tokenizer):
+#     # Create the IterableDataset from the generator
+#     bidi_iterabledataset = IterableDataset.from_generator(gen_bidi_inputs, gen_kwargs={'dataset': dataset, 'tokenizer': tokenizer})
+    
+#     # Define a __len__ method that calculates the length based on the original dataset
+#     def calculate_bidi_dataset_length(self):
+#         return sum(len(example['input_ids']) for example in dataset)
+
+#     # Attach the __len__ method to your bidi_iterabledataset
+#     bidi_iterabledataset.__len__ = types.MethodType(calculate_bidi_dataset_length, bidi_iterabledataset)
+
+#     return bidi_iterabledataset
+
+# class BidiIterableDataset(IterableDataset):
+#     def __init__(self, dataset, tokenizer):
+#         super().__init__()
+#         self.dataset = dataset
+#         self.tokenizer = tokenizer
+    
+#     def __iter__(self):
+#         for example in self.dataset:
+#             yield from bidi_expand(example, tokenizer)
+    
+#     def __len__(self):
+#         return sum(len(example['input_ids']) for example in self.dataset)
+
+
 # class BidirectionalInfillingDataCollator(DataCollatorForLanguageModeling):
 #     """
 #     Modifies the DataCollatorForLanguageModeling to return
@@ -177,6 +244,19 @@ def make_bidi_iterabledatasetdict(datasetdict, tokenizer):
 #         return batch
 #         # return super().__call__(features, return_tensors)
 
+
+class CustomDataCollator(DefaultDataCollator):
+    def __call__(self, examples):
+        input_ids = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['input_ids']) for e in examples], batch_first=True, padding_value=0)
+        attention_mask = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['attention_mask']) for e in examples], batch_first=True, padding_value=0)
+        labels = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['labels']) for e in examples], batch_first=True, padding_value=-100)  # Assuming -100 is your ignore index
+
+        return {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels
+        }
+
 def init_data_collator(tokenizer, context_direction='left'):
     print(f'Initializing data collator with {context_direction=}...')
     if context_direction == 'left':
@@ -184,7 +264,8 @@ def init_data_collator(tokenizer, context_direction='left'):
     elif context_direction == 'right':
         data_collator = ReverseSequenceDataCollator(tokenizer, mlm=False)
     elif context_direction == 'bidi':
-        data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+        data_collator = CustomDataCollator()
+        # data_collator = DataCollatorWithPadding(tokenizer)
         # data_collator = BidirectionalInfillingDataCollator(tokenizer, mlm=False)
     print('...done\n')
     return data_collator

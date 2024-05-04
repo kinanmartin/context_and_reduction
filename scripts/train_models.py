@@ -24,6 +24,7 @@ if __name__ == "__main__":
     # parser.add_argument("--need_to_tokenize")
     parser.add_argument("--tokenized_data_dir")
     parser.add_argument("--model_dir")
+    parser.add_argument("--per_device_batch_size", type=int, default=8)
     parser.add_argument("--eval", default=False)
     parser.add_argument("--from_pretrained", default=False)
     parser.add_argument("--context_size", default=None)
@@ -49,8 +50,8 @@ if __name__ == "__main__":
 
     train_args = TrainingArguments(
         args.model_dir,
-        per_device_train_batch_size=1024, # change to fit GPU specs
-        per_device_eval_batch_size=1024,
+        per_device_train_batch_size=args.per_device_batch_size, # change to fit GPU specs
+        per_device_eval_batch_size=args.per_device_batch_size,
         # auto_find_batch_size=True,
         evaluation_strategy='epoch',
         eval_steps=1,
@@ -68,6 +69,7 @@ if __name__ == "__main__":
 
     tokenized_dataset_dict = load_datasetdict(
         args.tokenized_data_dir,
+        tokenizer,
         args.context_direction,
         disable_cache=True
     )
