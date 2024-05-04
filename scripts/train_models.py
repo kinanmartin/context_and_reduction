@@ -43,7 +43,8 @@ if __name__ == "__main__":
         model.eval()
 
     # Load tokenizer
-    tokenizer = load_pretrained_tokenizer('gpt2', context=args.context_size)
+    tokenizer = load_pretrained_tokenizer('gpt2', context_size=args.context_size, context_direction=args.context_direction)
+    model.resize_token_embeddings(len(tokenizer))
 
     # Create data collator
     data_collator = init_data_collator(tokenizer, args.context_direction)
