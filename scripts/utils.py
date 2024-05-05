@@ -26,7 +26,7 @@ def load_datasetdict(tokenized_data_dir, tokenizer, context_direction='left', di
         print('...done\n')
         return tokenized_dataset_dict
     else:
-        bidi_tokenized_dataset_dict = make_bidi_iterabledatasetdict(tokenized_dataset_dict, tokenizer)
+        bidi_tokenized_dataset_dict = make_bidi_iterabledatasetdict(tokenized_dataset_dict, tokenizer, tokenized_data_dir)
         print('...done\n')
         return bidi_tokenized_dataset_dict
     
@@ -76,41 +76,42 @@ def bidi_expand(example, special_tokens_ids):
     n_tokens = len(input_ids)
     
     for i in range(n_tokens):
-        bidi_input_ids = [BOS_id] +  input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [EOS_id] + [SEP_id, FILLER_id]
-        bidi_attention_mask = [1] * (n_tokens + 4)
-        bidi_labels = ([-100] * (n_tokens + 3)) + [input_ids[i]] 
+        # bidi_input_ids = [BOS_id] +  input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [EOS_id] + [SEP_id, FILLER_id]
+        # bidi_attention_mask = [1] * (n_tokens + 4)
+        # bidi_labels = ([-100] * (n_tokens + 3)) + [input_ids[i]] 
+
+        bidi_input_ids = input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [SEP_id, FILLER_id]
+        bidi_attention_mask = [1] * (n_tokens + 2)
+        bidi_labels = ([-100] * (n_tokens + 1)) + [input_ids[i]] 
         
         bidi_input = {
             'input_ids': bidi_input_ids,
             'attention_mask': bidi_attention_mask,
             'labels': bidi_labels
         }
-        # print(bidi_input)
         assert len(bidi_input_ids) == len(bidi_attention_mask) == len(bidi_labels)
         yield bidi_input
 
 def gen_bidi_inputs(dataset, tokenizer):
     special_tokens = ['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']
     special_tokens_ids = [tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
-    
-    # BLANK_id = tokenizer.convert_tokens_to_ids(BLANK)
-    # FILLER_id = tokenizer.convert_tokens_to_ids(FILLER)
-    # SEP_id = tokenizer.convert_tokens_to_ids(SEP)
-    # BOS_id = tokenizer.convert_tokens_to_ids(BOS)
-    # EOS_id = tokenizer.convert_tokens_to_ids(EOS)
     for example in dataset:
         yield from bidi_expand(example, special_tokens_ids)
 
-def make_bidi_iterabledataset(dataset, tokenizer):
+def make_bidi_iterabledataset(dataset, tokenizer, split_path):
     bidi_iterabledataset = IterableDataset.from_generator(gen_bidi_inputs, gen_kwargs={'dataset': dataset, 'tokenizer': tokenizer})
-    # print(type(bidi_iterabledataset))
-    length = calculate_bidi_dataset_length(dataset)
+    print(dataset)
+    try:
+        with open(split_path+'/length.txt', 'r') as f:
+            length = int(f.readline())
+    except:
+        print(split_path)
+        length = calculate_bidi_dataset_length(dataset)
     class BidiIterableDataset(IterableDataset):
         def __len__(self):
             return length
         
     bidi_iterabledataset.__class__ = BidiIterableDataset
-    # print(isinstance(bidi_iterabledataset, collections.abc.Sized))
     return bidi_iterabledataset
 
 def calculate_bidi_dataset_length(dataset):
@@ -119,9 +120,9 @@ def calculate_bidi_dataset_length(dataset):
     print(f'...done ({length=})\n')
     return length
 
-def make_bidi_iterabledatasetdict(datasetdict, tokenizer):
+def make_bidi_iterabledatasetdict(datasetdict, tokenizer, tokenized_data_dir):
     bidi_iterabledatasetdict = IterableDatasetDict({
-        split: make_bidi_iterabledataset(dataset, tokenizer) for split, dataset in datasetdict.items()
+        split: make_bidi_iterabledataset(dataset, tokenizer, tokenized_data_dir+'/'+split) for split, dataset in datasetdict.items()
     })
     return bidi_iterabledatasetdict
 
