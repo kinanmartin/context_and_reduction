@@ -7,11 +7,9 @@ import random
 
 def init_model(context_size=None):
     print(f'Initializing model with context_size {context_size}...')
-    if context_size == 'bigram':
-        # configuration = GPT2Config(n_positions=8)
-        configuration = GPT2Config()
-    else:
-        configuration = GPT2Config()
+    # if context_size == 'bigram':
+    #     # configuration = GPT2Config(n_positions=8)
+    configuration = GPT2Config()
     model = GPT2LMHeadModel(configuration)
     print('...done\n')
     print(model.config)
