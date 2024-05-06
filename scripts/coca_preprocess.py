@@ -6,6 +6,9 @@ from tqdm import tqdm
 
 from datasets import load_dataset
 
+from nltk.tokenize import TreebankWordDetokenizer
+# from nltk.tokenize.punkt import PunktSentenceTokenizer
+
 def separate_chunks(text: str) -> List[str]:
     """
     COCA is composed of scrambled chunks split by "@" * 10 (possibly 
@@ -107,8 +110,11 @@ def clean_coca_file(
         overwrite=True,
         exclude_first_and_last_sentences=True,
         remove_nonspeaker_tags=True,
+        nltk_detokenize=True,
         ) -> None:
-    
+    if nltk_detokenize:
+        detokenizer = TreebankWordDetokenizer()
+
     context_choices = ['bigram', 'sentence', 'chunk']
     assert input_file_path.exists(), f'File "{input_file_path}" not found'
     assert split_by in context_choices, f'Invalid split method {split_by}: choose from {context_choices}'
@@ -130,6 +136,9 @@ def clean_coca_file(
                 sentences = split_chunk_into_sentences(chunk,
                                                     exclude_first_and_last_sentences,
                                                     remove_nonspeaker_tags)
+                if nltk_detokenize:
+                    sentences = [detokenizer.detokenize(sentence.split(' ')) for sentence in sentences]
+
                 if split_by == 'sentence':
                     f.write('\n'.join(sentences) + '\n')
                 elif split_by == 'bigram':
