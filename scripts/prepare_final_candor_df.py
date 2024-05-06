@@ -7,13 +7,13 @@ from surprisals import *
 from utils import *
 
 def load_transcript_output(convo_path: Path):
-    convo_path = Path(convo_path)
+    # convo_path = Path(convo_path)
     output_df = load_conversation_tokens(convo_path)
     output_df = output_df[output_df.type == 'pronunciation']    
     return output_df
 
 def load_transcribe_cliffhanger(convo_path: Path):
-    convo_path = Path(convo_path)
+    # convo_path = Path(convo_path)
     return pd.read_csv(convo_path / 'transcription/transcript_cliffhanger.csv')
 
 def candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer):
@@ -66,8 +66,8 @@ def candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer)
     return out.reset_index(drop=True)
 
 def make_df_from_convo_path(convo_path, model, tokenizer, out_path=None, save_type='pickle'):
-    convo_path = Path(convo_path)
-    out_path = Path(out_path)
+    # convo_path = Path(convo_path)
+    # out_path = Path(out_path)
     cliffhanger_df = load_transcribe_cliffhanger(convo_path)
     output_df = load_transcript_output(convo_path)
     cliffhanger_exploded = candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer)
@@ -86,9 +86,9 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     # parser.add_argument("--input_data_dir")
     # parser.add_argument("--need_to_tokenize")
-    parser.add_argument("--candor_convo_path")
-    parser.add_argument("--model_dir")
-    parser.add_argument("--out_path", default=None)
+    parser.add_argument("--candor_convo_path", type=Path)
+    parser.add_argument("--model_dir", type=Path)
+    parser.add_argument("--out_path", type=Path, default=None)
     parser.add_argument("--per_device_batch_size", type=int, default=8)
     parser.add_argument("--context_size", default='sentence')
     parser.add_argument("--context_direction", default='left')
@@ -101,7 +101,12 @@ if __name__ == '__main__':
     tokenizer_name = "gpt2"
 
     model = load_pretrained_model(model_dir)
-    tokenizer = load_pretrained_tokenizer(tokenizer_name, add_prefix_space=True)
+    tokenizer = load_pretrained_tokenizer(
+        tokenizer_name, 
+        context_size=args.context_size, 
+        context_direction=args.context_direction, 
+        add_prefix_space=True
+    )
     model.resize_token_embeddings(len(tokenizer))
 
     candor_df = make_df_from_convo_path(args.candor_convo_path, model, tokenizer, args.out_path, save_type='csv')
