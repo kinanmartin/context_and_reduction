@@ -69,7 +69,9 @@ class BidiDataCollator(DataCollatorWithPadding):
         self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
 
     def __call__(self, features, return_tensors=None):
-        if not hasattr(self, "special_tokens_ids"):
+        try:
+            self.special_tokens_ids
+        except AttributeError:
             self._save_special_tokens_ids()
 
         bidi_features = [make_bidi_input(feature, self.special_tokens_ids, seed=1029) for feature in features]
