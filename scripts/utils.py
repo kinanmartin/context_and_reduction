@@ -63,11 +63,14 @@ class ReverseSequenceDataCollator(DataCollatorForLanguageModeling):
     
 
 class BidiDataCollator(DataCollatorWithPadding):
-    tokenizer: PreTrainedTokenizerFast
-    special_tokens = ['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']
-    special_tokens_ids = [tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
+
+    def _save_special_tokens_ids(self):
+        special_tokens = ['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']
+        self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
 
     def __call__(self, features, return_tensors=None):
+        if not hasattr(self, "special_tokens_ids"):
+            self._save_special_tokens_ids()
 
         bidi_features = [make_bidi_input(feature, self.special_tokens_ids, seed=1029) for feature in features]
         print(bidi_features)
