@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--per_device_batch_size", type=int, default=8)
     parser.add_argument("--eval", default=False)
     parser.add_argument("--from_pretrained", default=False)
-    parser.add_argument("--context_size", default=None)
+    parser.add_argument("--context_size", default='sentence')
     parser.add_argument("--context_direction", default='left')
 
     args = parser.parse_args()
