@@ -53,23 +53,48 @@ if __name__ == "__main__":
     from datasets import disable_caching
     disable_caching()
 
-    model_dir = "models/script1/left_sentence/checkpoint-75047"
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    # parser.add_argument("--input_data_dir")
+    # parser.add_argument("--need_to_tokenize")
+    parser.add_argument("--tokenized_data_dir")
+    parser.add_argument("--model_dir")
+    parser.add_argument("--per_device_batch_size", type=int, default=8)
+    parser.add_argument("--context_size", default='sentence')
+    parser.add_argument("--context_direction", default='left')
+
+    args = parser.parse_args()
+
+    model_dir = args.model_dir
+    # model_dir = "models/script1/left_sentence/checkpoint-75047"
     # model_dir = "gpt2"
     tokenizer_name = "gpt2"
 
     model = load_pretrained_model(model_dir)
     tokenizer = load_pretrained_tokenizer(tokenizer_name)
-    data_collator = init_data_collator(tokenizer, 'left')
+    model.resize_token_embeddings(len(tokenizer))
 
-    tokenized_testset_dir = "data/coca_spoken/tokens_sentence/test"
+    data_collator = init_data_collator(tokenizer, args.context_direction)
+
+    # tokenized_testset_dir = args.tokenized_data_dir
     # tokenized_testset_dir = "data/coca_spoken/tokens_sentence/test"
 
-    print(f'Loading {tokenized_testset_dir=}...')
-    test_set = load_from_disk(tokenized_testset_dir)
-    test_set = test_set.remove_columns('text')
-    print('...done')
+    tokenized_dataset_dict = load_datasetdict(
+        args.tokenized_data_dir,
+        tokenizer,
+        args.context_direction,
+        disable_cache=True
+    )
 
-    perplexity = calculate_perplexity(model, tokenizer, data_collator, test_set)
+    test_set = tokenized_dataset_dict['test']
+
+    # print(f'Loading {tokenized_testset_dir=}...')
+    # test_set = load_from_disk(tokenized_testset_dir)
+    # test_set = test_set.remove_columns('text')
+    # print('...done')
+
+    perplexity = calculate_perplexity(model, tokenizer, data_collator, test_set,
+                                      batch_size=args.per_device_batch_size)
     print(f"Perplexity: {perplexity}")
 
     # from coca_tokenize import load_data_in_splits
