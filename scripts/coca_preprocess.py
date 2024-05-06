@@ -8,6 +8,7 @@ from datasets import load_dataset
 
 from nltk.tokenize import TreebankWordDetokenizer
 # from nltk.tokenize.punkt import PunktSentenceTokenizer
+from nltk import sent_tokenize
 
 def separate_chunks(text: str) -> List[str]:
     """
@@ -56,8 +57,9 @@ def split_by_speaker_and_other_tags(
 def split_turn_into_sentences(
         turn: str, 
         # exclude_sentences_with_ellipses=False
-        ) -> str:
+        ) -> List[str]:
     """
+    DEPRECATED: use nltk sent_tokenize instead.
     Splits one tag-free turn (as separated by split_by_speaker_and_other_tags) 
         into sentences.
     Since COCA has space-separated punctuation, splits are done by:
@@ -81,11 +83,14 @@ def split_turn_into_sentences(
             out[-1] += split[:-1] # don't include space after punctuation
     return out
 
+def nltk_split_turn_into_sentences(turn):
+    return sent_tokenize(turn)
 
 def split_chunk_into_sentences(
         chunk: str,
         exclude_first_and_last_sentences=True,
         remove_nonspeaker_tags=True,
+        nltk_sent_tokenize=True,
         ) -> List[str]:
     """
     Combines `split_by_speaker_and_other_tags` and 
@@ -99,7 +104,10 @@ def split_chunk_into_sentences(
                                             remove_nonspeaker_tags)
     sentences = []
     for turn in turns:
-        sentences.extend(split_turn_into_sentences(turn))
+        if nltk_sent_tokenize:
+            sentences.extend(nltk_split_turn_into_sentences(turn))
+        else:
+            sentences.extend(split_turn_into_sentences(turn))
     return sentences[1:-1] if exclude_first_and_last_sentences else sentences
 
 
@@ -111,6 +119,7 @@ def clean_coca_file(
         exclude_first_and_last_sentences=True,
         remove_nonspeaker_tags=True,
         nltk_detokenize=True,
+        replace_emdash_with_comma=True,
         ) -> None:
     if nltk_detokenize:
         detokenizer = TreebankWordDetokenizer()
@@ -138,6 +147,8 @@ def clean_coca_file(
                                                     remove_nonspeaker_tags)
                 if nltk_detokenize:
                     sentences = [detokenizer.detokenize(sentence.split(' ')) for sentence in sentences]
+                    if replace_emdash_with_comma:
+                        sentences = [sentence.replace('--', ', ') for sentence in sentences]
 
                 if split_by == 'sentence':
                     f.write('\n'.join(sentences) + '\n')
@@ -155,7 +166,23 @@ def clean_coca_file(
 
 
 if __name__ == '__main__':
-    coca_dir = "data/coca/text/text_spoken_kde/"
+
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    # parser.add_argument("--input_data_dir")
+    # parser.add_argument("--need_to_tokenize")
+    parser.add_argument("--coca_dir", type=Path)
+    parser.add_argument("--output_dir", type=Path)
+    parser.add_argument("--context_size", default='sentence')
+
+    args = parser.parse_args()
+
+
+    # coca_dir = "data/coca/text/text_spoken_kde/"
+    coca_dir = args.coca_dir
+    # output_dir = Path("data/coca_spoken/text_bigram_cleaned/")
+    output_dir = args.output_dir
+    context_size = args.context_size
 
     # clean_coca_file(
     #     input_file_path=Path("../data/coca/text/text_spoken_kde/w_spok_2000.txt"),
@@ -163,12 +190,13 @@ if __name__ == '__main__':
     #     split_by='chunk'
     # )
 
-    for file in Path(coca_dir).iterdir():
+    for file in coca_dir.iterdir():
         clean_coca_file(
             input_file_path=file, 
-            output_dir_path=Path("data/coca_spoken/text_bigram_cleaned/"),
-            split_by='bigram'
+            output_dir_path=output_dir,
+            split_by=context_size
         )
+        break
 
     # # dataset = load_dataset('text', data_dir=coca_dir)
     # dataset = load_dataset('text', data_files=coca_dir+'w_spok_201*.txt')
