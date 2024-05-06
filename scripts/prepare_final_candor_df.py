@@ -7,11 +7,13 @@ from surprisals import *
 from utils import *
 
 def load_transcript_output(convo_path: Path):
+    convo_path = Path(convo_path)
     output_df = load_conversation_tokens(convo_path)
     output_df = output_df[output_df.type == 'pronunciation']    
     return output_df
 
 def load_transcribe_cliffhanger(convo_path: Path):
+    convo_path = Path(convo_path)
     return pd.read_csv(convo_path / 'transcription/transcript_cliffhanger.csv')
 
 def candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer):
@@ -63,10 +65,12 @@ def candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer)
     out["position_in_turn"] = out.groupby("turn_id").cumcount()
     return out.reset_index(drop=True)
 
-def make_df_from_convo_path(convo_path, out_path=None, save_type='pickle'):
+def make_df_from_convo_path(convo_path, model, tokenizer, out_path=None, save_type='pickle'):
+    convo_path = Path(convo_path)
+    out_path = Path(out_path)
     cliffhanger_df = load_transcribe_cliffhanger(convo_path)
     output_df = load_transcript_output(convo_path)
-    cliffhanger_exploded = candor_durations_and_surprisals(cliffhanger_df, output_df)
+    cliffhanger_exploded = candor_durations_and_surprisals(cliffhanger_df, output_df, model, tokenizer)
     if out_path is not None:
         if save_type == 'pickle':
             cliffhanger_exploded.to_pickle(out_path / (convo_path.name + '.pickle'))
@@ -75,7 +79,30 @@ def make_df_from_convo_path(convo_path, out_path=None, save_type='pickle'):
     return cliffhanger_exploded
 
 if __name__ == '__main__':
-    convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
-    out_path = Path('data/candor/exploded/')
-    candor_df = make_df_from_convo_path(convo_path, out_path, save_type='csv')
+    # convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
+    # out_path = Path('data/candor/exploded/')
+
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    # parser.add_argument("--input_data_dir")
+    # parser.add_argument("--need_to_tokenize")
+    parser.add_argument("--candor_convo_path")
+    parser.add_argument("--model_dir")
+    parser.add_argument("--out_path", default=None)
+    parser.add_argument("--per_device_batch_size", type=int, default=8)
+    parser.add_argument("--context_size", default='sentence')
+    parser.add_argument("--context_direction", default='left')
+
+    args = parser.parse_args()
+
+    model_dir = args.model_dir
+    # model_dir = "models/script1/left_sentence/checkpoint-75047"
+    # model_dir = "gpt2"
+    tokenizer_name = "gpt2"
+
+    model = load_pretrained_model(model_dir)
+    tokenizer = load_pretrained_tokenizer(tokenizer_name, add_prefix_space=True)
+    model.resize_token_embeddings(len(tokenizer))
+
+    candor_df = make_df_from_convo_path(args.candor_convo_path, model, tokenizer, args.out_path, save_type='csv')
     
