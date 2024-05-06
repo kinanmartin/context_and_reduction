@@ -102,11 +102,19 @@ def make_bidi_iterabledataset(dataset, tokenizer, split_path):
     bidi_iterabledataset = IterableDataset.from_generator(gen_bidi_inputs, gen_kwargs={'dataset': dataset, 'tokenizer': tokenizer})
     print(dataset)
     try:
+        # It's expensive to calculate the bidirectional dataset's length since it requires
+        # looping through the entire dataset. So, I create a file in the split's path to save the length
         with open(split_path+'/length.txt', 'r') as f:
             length = int(f.readline())
     except:
         print(split_path)
         length = calculate_bidi_dataset_length(dataset)
+
+    # To train by epoch, the dataset's CLASS needs to have a __len__ method.
+    # We can't easily add a __len__ method to the IterableDataset class, and since we initialize 
+    # the dataset with IterableDataset.from_generator and not __init__, we can't just initialize
+    # our dataset as a subclass using __init__. So, I instead create a subclass with the __len__ 
+    # method, then manually change the .__class__ attribute of the dataset.
     class BidiIterableDataset(IterableDataset):
         def __len__(self):
             return length
