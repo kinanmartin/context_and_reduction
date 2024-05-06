@@ -15,7 +15,7 @@ def init_model(context_size=None):
     print(model.config)
     return model
 
-def load_datasetdict(tokenized_data_dir, tokenizer, disable_cache=True):
+def load_datasetdict(tokenized_data_dir, disable_cache=True):
     print(f'Loading {tokenized_data_dir=}...')
     if disable_cache:
         print('...disabling cache while loading dataset...')

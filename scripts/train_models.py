@@ -70,7 +70,6 @@ if __name__ == "__main__":
 
     tokenized_dataset_dict = load_datasetdict(
         args.tokenized_data_dir,
-        tokenizer,
         args.context_direction,
         disable_cache=True
     )
