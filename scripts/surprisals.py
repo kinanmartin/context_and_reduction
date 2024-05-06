@@ -49,7 +49,8 @@ def calculate_surprisal(inputs, model):
     """
     # print(inputs)
     input_ids = inputs['input_ids']
-
+    loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+    
     with torch.no_grad():
         input_ids = input_ids.to(device)
         outputs = model(input_ids, labels=input_ids)
@@ -58,7 +59,6 @@ def calculate_surprisal(inputs, model):
         shift_logits = logit_predictions[..., :-1, :].contiguous()
         shift_labels = input_ids[..., 1:].contiguous()
         
-        loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
         
         surprisals = loss.view(shift_labels.size()).cpu().numpy().tolist()
