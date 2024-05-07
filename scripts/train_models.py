@@ -43,7 +43,11 @@ if __name__ == "__main__":
         model.eval()
 
     # Load tokenizer
-    tokenizer = load_pretrained_tokenizer('gpt2', context_size=args.context_size, context_direction=args.context_direction)
+    tokenizer = load_pretrained_tokenizer(
+        'gpt2', 
+        context_size=args.context_size, 
+        context_direction=args.context_direction,
+        padding=True) # shouldn't change anything now
     model.resize_token_embeddings(len(tokenizer))
 
     # Create data collator
@@ -59,7 +63,8 @@ if __name__ == "__main__":
         logging_steps=0.01,
         save_strategy='epoch',
         save_steps=0.25,
-        group_by_length=True if args.context_direction != 'bidi' else False,
+        # group_by_length=True if args.context_direction != 'bidi' else False,
+        group_by_length=True,
         # load_best_model_at_end=True,
         # metric_for_best_model='loss',
         # greater_is_better=False,
@@ -70,7 +75,6 @@ if __name__ == "__main__":
 
     tokenized_dataset_dict = load_datasetdict(
         args.tokenized_data_dir,
-        args.context_direction,
         disable_cache=True
     )
 

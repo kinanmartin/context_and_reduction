@@ -31,11 +31,16 @@ def load_pretrained_model(pretrained_model_name_or_path):
     print('...done\n')
     return model
 
-def load_pretrained_tokenizer(pretrained_model_name_or_path, context_size=None, context_direction='left', add_prefix_space=False):
+def load_pretrained_tokenizer(pretrained_model_name_or_path, 
+                              context_size=None, 
+                              context_direction='left', 
+                              add_prefix_space=False,
+                              padding=False):
     print(f'Loading pretrained tokenizer from {pretrained_model_name_or_path}...')
     tokenizer = GPT2TokenizerFast.from_pretrained(
         pretrained_model_name_or_path, 
         add_prefix_space=add_prefix_space, # AssertionError: You need to instantiate GPT2TokenizerFast with add_prefix_space=True to use it with pretokenized inputs.
+        padding=padding
     )
 
     # if context_size == 'bigram':
@@ -62,21 +67,26 @@ class ReverseSequenceDataCollator(DataCollatorForLanguageModeling):
         return super().__call__(features, return_tensors)
     
 
-class BidiDataCollator(DataCollatorWithPadding):
+class BidiDataCollator(DefaultDataCollator):
 
-    def _save_special_tokens_ids(self):
-        special_tokens = ['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']
+    def __init__(self, tokenizer, special_tokens=['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']):
+        self.tokenizer = tokenizer
+        self.special_tokens = special_tokens
         self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
 
-    def __call__(self, features, return_tensors=None):
-        try:
-            self.special_tokens_ids
-        except AttributeError:
-            self._save_special_tokens_ids()
-
+    def __call__(self, features):
         bidi_features = [make_bidi_input(feature, self.special_tokens_ids, seed=1029) for feature in features]
-        print(bidi_features)
-        return super().__call__(bidi_features, return_tensors)
+
+        input_ids = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['input_ids']) for e in bidi_features], batch_first=True, padding_value=0)
+        attention_mask = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['attention_mask']) for e in bidi_features], batch_first=True, padding_value=0)
+        labels = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['labels']) for e in bidi_features], batch_first=True, padding_value=-100)  # Assuming -100 is your ignore index
+
+        batch = {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels
+        }
+        return batch
     
 def make_bidi_input(feature, special_tokens_ids, seed=1029):
     BLANK_id, FILLER_id, SEP_id, BOS_id, EOS_id = special_tokens_ids
