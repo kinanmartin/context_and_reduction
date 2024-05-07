@@ -120,6 +120,7 @@ def clean_coca_file(
         remove_nonspeaker_tags=True,
         nltk_detokenize=True,
         replace_emdash_with_comma=True,
+        # add_bos_token_to_sentences=True,
         ) -> None:
     if nltk_detokenize:
         detokenizer = TreebankWordDetokenizer()
@@ -150,6 +151,8 @@ def clean_coca_file(
                     if replace_emdash_with_comma:
                         sentences = [sentence.replace('--', ', ') for sentence in sentences]
 
+                # if add_bos_token_to_sentences:
+                #     sentences = ['[BOS] ' + sentence for sentence in sentences]
                 if split_by == 'sentence':
                     f.write('\n'.join(sentences) + '\n')
                 elif split_by == 'bigram':
