@@ -44,7 +44,8 @@ def load_pretrained_tokenizer(pretrained_model_name_or_path,
     )
 
     if context_size == 'sentence':
-        tokenizer.add_special_tokens({'bos_token': '[BOS]'})
+        tokenizer.add_special_tokens({'bos_token': '[BOS]',
+                                      'eos_token': '[EOS]'})
     if context_size == 'bigram':
         tokenizer.add_special_tokens({'bos_token': '<s>',
                                       'eos_token': '</s>',})

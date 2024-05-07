@@ -19,12 +19,9 @@ def load_data_in_splits(data_dir, train=0.8, val=0.1, test=0.1, seed=41):
 def tokenize_data(dataset_dict, tokenizer, context_size):
     print('Tokenizing dataset_dict with tokenizer...')
 
-    if context_size == 'sentence' and '[BOS]' not in tokenizer.get_vocab():
-        tokenizer.add_tokens('[BOS]')
-
     def tokenize_func(x):
         out = tokenizer(
-            ['[BOS] ' + text for text in x['text']] if context_size == 'sentence' else x['text'],
+            ['[BOS] ' + text + ' [EOS]' for text in x['text']] if context_size == 'sentence' else x['text'],
             truncation=True,
             )
         return out
