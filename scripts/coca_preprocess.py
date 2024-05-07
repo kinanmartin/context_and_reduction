@@ -196,7 +196,6 @@ if __name__ == '__main__':
             output_dir_path=output_dir,
             split_by=context_size
         )
-        break
 
     # # dataset = load_dataset('text', data_dir=coca_dir)
     # dataset = load_dataset('text', data_files=coca_dir+'w_spok_201*.txt')
