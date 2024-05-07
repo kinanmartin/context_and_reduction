@@ -69,7 +69,7 @@ class ReverseSequenceDataCollator(DataCollatorForLanguageModeling):
 
 class BidiDataCollator(DefaultDataCollator):
 
-    def __init__(self, tokenizer, special_tokens=['[BLANK]', '[FILLER]', '[SEP]', '<s>', '</s>']):
+    def __init__(self, tokenizer, special_tokens=['[BLANK]', '[FILLER]', '[SEP]']):
         self.tokenizer = tokenizer
         self.special_tokens = special_tokens
         self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
@@ -89,7 +89,7 @@ class BidiDataCollator(DefaultDataCollator):
         return batch
     
 def make_bidi_input(feature, special_tokens_ids, seed=1029):
-    BLANK_id, FILLER_id, SEP_id, BOS_id, EOS_id = special_tokens_ids
+    BLANK_id, FILLER_id, SEP_id= special_tokens_ids
 
     input_ids = feature['input_ids']
     # attention_mask = features['attention_mask']
