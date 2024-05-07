@@ -32,7 +32,7 @@ def load_pretrained_model(pretrained_model_name_or_path):
     return model
 
 def load_pretrained_tokenizer(pretrained_model_name_or_path, 
-                              context_size=None, 
+                              context_size='sentence', 
                               context_direction='left', 
                               add_prefix_space=False,
                               padding=False):
@@ -43,15 +43,17 @@ def load_pretrained_tokenizer(pretrained_model_name_or_path,
         padding=padding
     )
 
-    # if context_size == 'bigram':
-    tokenizer.bos_token = '<s>'
-    tokenizer.eos_token = '</s>'
+    if context_size == 'sentence':
+        tokenizer.add_special_tokens({'bos_token': '[BOS]'})
+    if context_size == 'bigram':
+        tokenizer.add_special_tokens({'bos_token': '<s>',
+                                      'eos_token': '</s>',})
 
     if context_direction == 'bidi':
         special_tokens = ['[BLANK]', '[FILLER]', '[SEP]',]
             # 'BOS': '<s>',
             # 'EOS': '</s>',
-        tokenizer.add_tokens(special_tokens)
+        tokenizer.add_special_tokens({token[1:-1]: token for token in special_tokens})
 
     tokenizer.pad_token = tokenizer.eos_token # ?
     print("Vocabulary size:", tokenizer.vocab_size)
