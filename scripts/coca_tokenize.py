@@ -2,8 +2,6 @@ from tqdm import tqdm
 from datasets import load_dataset, DatasetDict, load_from_disk
 from transformers import GPT2TokenizerFast
 from utils import load_pretrained_tokenizer
-from tokenizers.processors import TemplateProcessing
-from pathlib import Path
 
 def load_data_in_splits(data_dir, train=0.8, val=0.1, test=0.1, seed=41):
     print(f'Loading data from {data_dir} (split ratios {(train, val, test)})...')
@@ -29,9 +27,6 @@ def tokenize_data(dataset_dict, tokenizer, context_size):
             ['[BOS] ' + text for text in x['text']] if context_size == 'sentence' else x['text'],
             truncation=True,
             )
-            # tokenizer postprocess!!
-            # out.insert(0, tokenizer.bos_token)
-            # out.append(tokenizer.eos_token)
         return out
 
     encoded_datasets = dataset_dict.map(
