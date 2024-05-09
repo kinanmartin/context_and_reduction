@@ -51,10 +51,11 @@ def load_pretrained_tokenizer(pretrained_model_name_or_path,
                                       'eos_token': '</s>',})
 
     if context_direction == 'bidi':
-        special_tokens = ['[BLANK]', '[FILLER]', '[SEP]',]
-            # 'BOS': '<s>',
-            # 'EOS': '</s>',
-        tokenizer.add_special_tokens({token[1:-1]: token for token in special_tokens})
+        tokenizer.add_special_tokens({
+            'mask_token': '[BLANK]',
+            'cls_token': '[FILLER]',
+            'sep_token': '[SEP]'
+            })
 
     tokenizer.pad_token = tokenizer.eos_token # ?
     print("Vocabulary size:", tokenizer.vocab_size)
@@ -73,13 +74,14 @@ class ReverseSequenceDataCollator(DataCollatorForLanguageModeling):
 class BidiDataCollator(DefaultDataCollator):
     random.seed(1299)
 
-    def __init__(self, tokenizer, special_tokens=['[BLANK]', '[FILLER]', '[SEP]']):
+    def __init__(self, tokenizer, context_size, special_tokens=['[BLANK]', '[FILLER]', '[SEP]']):
         self.tokenizer = tokenizer
+        self.trigram = context_size == 'trigram'
         self.special_tokens = special_tokens
         self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
 
     def __call__(self, features):
-        bidi_features = [make_bidi_input(feature, self.special_tokens_ids) for feature in features]
+        bidi_features = [make_bidi_input(feature, self.special_tokens_ids, self.trigram) for feature in features]
 
         input_ids = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['input_ids']) for e in bidi_features], batch_first=True, padding_value=0)
         attention_mask = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['attention_mask']) for e in bidi_features], batch_first=True, padding_value=0)
@@ -92,15 +94,18 @@ class BidiDataCollator(DefaultDataCollator):
         }
         return batch
     
-def make_bidi_input(feature, special_tokens_ids):
-    BLANK_id, FILLER_id, SEP_id= special_tokens_ids
+def make_bidi_input(feature, special_tokens_ids, trigram=False):
+    BLANK_id, FILLER_id, SEP_id = special_tokens_ids
 
     input_ids = feature['input_ids']
     # attention_mask = features['attention_mask']
 
     n_tokens = len(input_ids)
 
-    i = random.randint(0, len(input_ids)-1)
+    if trigram:
+        i = 2 # center word
+    else:
+        i = random.randint(1, len(input_ids)-2) # to exclude preexisting BOS and EOS
     
     # bidi_input_ids = [BOS_id] +  input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [EOS_id] + [SEP_id, FILLER_id]
     # bidi_attention_mask = [1] * (n_tokens + 4)
@@ -119,14 +124,14 @@ def make_bidi_input(feature, special_tokens_ids):
     return bidi_input
 
 
-def init_data_collator(tokenizer, context_direction='left'):
+def init_data_collator(tokenizer, context_direction='left', context_size=None):
     print(f'Initializing data collator with {context_direction=}...')
     if context_direction == 'left':
         data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
     elif context_direction == 'right':
         data_collator = ReverseSequenceDataCollator(tokenizer, mlm=False)
     elif context_direction == 'bidi':
-        data_collator = BidiDataCollator(tokenizer)
+        data_collator = BidiDataCollator(tokenizer, context_size)
     print('...done\n')
     return data_collator
 

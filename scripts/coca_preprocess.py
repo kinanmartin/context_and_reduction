@@ -125,7 +125,7 @@ def clean_coca_file(
     if nltk_detokenize:
         detokenizer = TreebankWordDetokenizer()
 
-    context_choices = ['bigram', 'sentence', 'chunk']
+    context_choices = ['bigram', 'sentence', 'chunk', 'trigram']
     assert input_file_path.exists(), f'File "{input_file_path}" not found'
     assert split_by in context_choices, f'Invalid split method {split_by}: choose from {context_choices}'
 
@@ -159,10 +159,22 @@ def clean_coca_file(
                     for sentence in sentences:
                         words = sentence.split(' ')
                         f.write('<s>' + ' ' + words[0] + '\n')
-                        for i in range(1, len(words)-1):
-                            f.write(words[i] + ' ' + words[i+1] + '\n')
-                        f.write(words[-1] + ' ' + '</s>' '\n')
-        
+                        if len(words) > 1:
+                            for i in range(0, len(words)-1):
+                                f.write(words[i] + ' ' + words[i+1] + '\n')
+                        f.write(words[-1] + ' ' + '</s>' + '\n')
+                elif split_by == 'trigram':
+                    for sentence in sentences:
+                        words = sentence.split(' ')
+                        if len(words) == 1:
+                            f.write(' '.join(['<s>', words[0], '</s>']) + '\n')
+                            continue
+
+                        f.write(' '.join(['<s>', words[0], words[1]]) + '\n')
+                        if len(words) > 2:
+                            for i in range(0, len(words)-2):
+                                f.write(' '.join([words[i], words[i+1], words[i+2]]) + '\n')
+                        f.write(' '.join([words[-2], words[-1], '</s>']) + '\n')
 
     f.close()
     return None
