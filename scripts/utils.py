@@ -4,6 +4,7 @@ from datasets import load_from_disk, disable_caching, IterableDataset, IterableD
 device = "cuda" if torch.cuda.is_available() else "cpu"
 import types, collections
 import random
+from bisect import bisect_left, bisect_right
 
 def init_model(context_size=None):
     print(f'Initializing model with context_size {context_size}...')
@@ -34,7 +35,7 @@ def load_pretrained_model(pretrained_model_name_or_path):
 def load_pretrained_tokenizer(pretrained_model_name_or_path, 
                               context_size='sentence', 
                               context_direction='left', 
-                              add_prefix_space=False,
+                              add_prefix_space=True,
                               padding=False):
     print(f'Loading pretrained tokenizer from {pretrained_model_name_or_path}...')
     tokenizer = GPT2TokenizerFast.from_pretrained(
@@ -93,27 +94,38 @@ class BidiDataCollator(DefaultDataCollator):
             'labels': labels
         }
         return batch
-    
+
+
+def find_first_last_indices(arr, target):
+    first_index = bisect_left(arr, target)
+    last_index = bisect_right(arr, target) - 1
+    return first_index, last_index
+
 def make_bidi_input(feature, special_tokens_ids, trigram=False):
     BLANK_id, FILLER_id, SEP_id = special_tokens_ids
 
     input_ids = feature['input_ids']
     # attention_mask = features['attention_mask']
+    word_ids = feature['word_ids']
 
     n_tokens = len(input_ids)
 
     if trigram:
-        i = 2 # center word
+        # example:
+        # words: [<s>, I'm, not]
+        # word_ids: [0, 1, 1, 2]  # length is len(tokens), word_ids[-1] is len(words)
+        # in this case, we must mask word_id=1
+        assert word_ids[-1] == 2, f'tokenized trigram has too many words: {word_ids}'
+        word_id_to_mask = 1
     else:
-        i = random.randint(1, len(input_ids)-2) # to exclude preexisting BOS and EOS
+        word_id_to_mask = random.randint(1, word_ids[-1]-1) # 1 and -1 to exclude [BOS] and [EOS]
     
-    # bidi_input_ids = [BOS_id] +  input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [EOS_id] + [SEP_id, FILLER_id]
-    # bidi_attention_mask = [1] * (n_tokens + 4)
-    # bidi_labels = ([-100] * (n_tokens + 3)) + [input_ids[i]] 
+    token_mask_start_idx, token_mask_end_idx = find_first_last_indices(word_ids, word_id_to_mask)
+    mask_len = token_mask_end_idx - token_mask_start_idx + 1
 
-    bidi_input_ids = input_ids[:i] + [BLANK_id] + input_ids[i+1:] + [SEP_id, FILLER_id]
+    bidi_input_ids = input_ids[:token_mask_start_idx] + [BLANK_id] + input_ids[token_mask_end_idx+1:] + [SEP_id] + ([FILLER_id] * mask_len)
     bidi_attention_mask = [1] * (n_tokens + 2)
-    bidi_labels = ([-100] * (n_tokens + 1)) + [input_ids[i]] 
+    bidi_labels = ([-100] * (n_tokens + 1)) + input_ids[token_mask_start_idx:token_mask_end_idx+1]
     
     bidi_input = {
         'input_ids': bidi_input_ids,
