@@ -60,15 +60,17 @@ if __name__ == "__main__":
         # auto_find_batch_size=True,
         evaluation_strategy='epoch',
         eval_steps=1,
+        logging_strategy='epoch',
         logging_steps=0.01,
-        save_strategy='epoch',
-        save_steps=0.25,
+        save_strategy='steps',
+        save_steps=20000,
         group_by_length=True, #if args.context_size == 'sentence' else False, 
         # load_best_model_at_end=True,
         # metric_for_best_model='loss',
         # greater_is_better=False,
-        save_total_limit=5,
+        save_total_limit=3,
         num_train_epochs=1,
+        remove_unused_columns=False, # to save word_ids
     )
     print(train_args.device)
 
@@ -76,6 +78,17 @@ if __name__ == "__main__":
         args.tokenized_data_dir,
         disable_cache=True
     )
+
+    print(tokenized_dataset_dict['train'][42])
+
+    if args.context_direction != 'bidi':
+        print("context_direction is not bidi, so we drop word_ids before training")
+        tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['word_ids'])
+        print(tokenized_dataset_dict['train'][42])
+
+    print("dropping 'text' before training")
+    tokenized_dataset_dict = tokenized_dataset_dict.remove_columns(['text'])
+    print(tokenized_dataset_dict['train'][42])
 
     if not args.eval:
         trainer = Trainer(

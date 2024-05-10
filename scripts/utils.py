@@ -77,7 +77,7 @@ class BidiDataCollator(DefaultDataCollator):
 
     def __init__(self, tokenizer, context_size, special_tokens=['[BLANK]', '[FILLER]', '[SEP]']):
         self.tokenizer = tokenizer
-        self.trigram = context_size == 'trigram'
+        self.trigram = context_size == 'bigram'
         self.special_tokens = special_tokens
         self.special_tokens_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in special_tokens]
 
@@ -103,7 +103,7 @@ def find_first_last_indices(arr, target):
 
 def make_bidi_input(feature, special_tokens_ids, trigram=False):
     BLANK_id, FILLER_id, SEP_id = special_tokens_ids
-
+    # print(feature)
     input_ids = feature['input_ids']
     # attention_mask = features['attention_mask']
     word_ids = feature['word_ids']
@@ -115,8 +115,8 @@ def make_bidi_input(feature, special_tokens_ids, trigram=False):
         # words: [<s>, I'm, not]
         # word_ids: [0, 1, 1, 2]  # length is len(tokens), word_ids[-1] is len(words)
         # in this case, we must mask word_id=1
-        assert word_ids[-1] == 2, f'tokenized trigram has too many words: {word_ids}'
-        word_id_to_mask = 1
+        # assert word_ids[-1] == 2, f'tokenized trigram has too many words: {word_ids}'
+        word_id_to_mask = max(0, word_ids[-1]-1)
     else:
         word_id_to_mask = random.randint(1, word_ids[-1]-1) # 1 and -1 to exclude [BOS] and [EOS]
     
@@ -125,14 +125,15 @@ def make_bidi_input(feature, special_tokens_ids, trigram=False):
 
     bidi_input_ids = input_ids[:token_mask_start_idx] + [BLANK_id] + input_ids[token_mask_end_idx+1:] + [SEP_id] + ([FILLER_id] * mask_len)
     bidi_attention_mask = [1] * (n_tokens + 2)
-    bidi_labels = ([-100] * (n_tokens + 1)) + input_ids[token_mask_start_idx:token_mask_end_idx+1]
+    bidi_labels = ([-100] * (n_tokens + 2 - mask_len)) + input_ids[token_mask_start_idx:token_mask_end_idx+1]
     
     bidi_input = {
         'input_ids': bidi_input_ids,
         'attention_mask': bidi_attention_mask,
         'labels': bidi_labels
     }
-    assert len(bidi_input_ids) == len(bidi_attention_mask) == len(bidi_labels)
+
+    assert len(bidi_input_ids) == len(bidi_attention_mask) == len(bidi_labels), f"lengths don't match: {bidi_input_ids}\n{bidi_attention_mask}\n{bidi_labels}"
     return bidi_input
 
 
