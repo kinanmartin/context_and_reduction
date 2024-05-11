@@ -27,7 +27,7 @@ def calculate_perplexity(model, tokenizer, data_collator, test_dataset, batch_si
 
     with torch.no_grad():
         for batch in (pbar := tqdm(dataloader)):
-            inputs = {key: val.to(model.device) for key, val in batch.items() if key in ['input_ids', 'attention_mask', 'labels']}
+            inputs = {key: val.to(model.device) for key, val in batch.items()}
             outputs = model(**inputs)
             loss = outputs.loss
             batch_loss = loss.item() * inputs["input_ids"].size(0)
@@ -68,21 +68,22 @@ if __name__ == "__main__":
     model_dir = args.model_dir
     # model_dir = "models/script1/left_sentence/checkpoint-75047"
     # model_dir = "gpt2"
-    tokenizer_name = "gpt2"
 
     model = load_pretrained_model(model_dir)
-    tokenizer = load_pretrained_tokenizer(tokenizer_name)
+    tokenizer = load_pretrained_tokenizer(
+        'gpt2', 
+        context_size=args.context_size, 
+        context_direction=args.context_direction,
+        padding=True) # shouldn't change anything now
     model.resize_token_embeddings(len(tokenizer))
 
-    data_collator = init_data_collator(tokenizer, args.context_direction)
+    data_collator = init_data_collator(tokenizer, args.context_direction, args.context_size)
 
     # tokenized_testset_dir = args.tokenized_data_dir
     # tokenized_testset_dir = "data/coca_spoken/tokens_sentence/test"
 
     tokenized_dataset_dict = load_datasetdict(
         args.tokenized_data_dir,
-        tokenizer,
-        args.context_direction,
         disable_cache=True
     )
 
@@ -92,6 +93,15 @@ if __name__ == "__main__":
     # test_set = load_from_disk(tokenized_testset_dir)
     # test_set = test_set.remove_columns('text')
     # print('...done')
+
+    print(test_set[42])
+
+    if args.context_direction != 'bidi':
+        test_set = test_set.remove_columns(['word_ids'])
+
+    test_set = test_set.remove_columns(['text'])
+    print(test_set[42])
+
 
     perplexity = calculate_perplexity(model, tokenizer, data_collator, test_set,
                                       batch_size=args.per_device_batch_size)
@@ -114,4 +124,21 @@ if __name__ == "__main__":
 
     # perplexity = calculate_perplexity(model, tokenizer, test_set, 'cpu')
     # print(f"Perplexity: {perplexity}")
+
+
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/left_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=left ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/right_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=right ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/bidi_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=bidi ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt/left_bigram_OLD/checkpoint-59321 --per_device_batch_size=1024 --context_size=bigram --context_direction=left ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt/right_bigram_OLD/checkpoint-59321 --per_device_batch_size=1024 --context_size=bigram --context_direction=right ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_trigram --model_dir=models/gpt/bidi_bigram/checkpoint-100000 --per_device_batch_size=512 --context_size=bigram --context_direction=bidi ;
+
+
+# 55.37468338012695 (wrong original dataset)
+# 178.59422302246094 (wrong original dataset)
+# 27.41640281677246
+# 71.05626678466797
+# xxx
+# 30.830102920532227
+
 
