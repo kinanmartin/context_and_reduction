@@ -148,6 +148,24 @@ def init_data_collator(tokenizer, context_direction='left', context_size=None):
     print('...done\n')
     return data_collator
 
+def gen_bigrams(words):
+    yield ('<s>' + ' ' + words[0])
+    if len(words) > 1:
+        for i in range(0, len(words)-1):
+            yield (words[i] + ' ' + words[i+1])
+    yield (words[-1] + ' ' + '</s>')
+
+def gen_trigrams(words):
+    if len(words) == 1:
+        yield (' '.join(['<s>', words[0], '</s>']))
+        return
+
+    yield (' '.join(['<s>', words[0], words[1]]))
+    if len(words) > 2:
+        for i in range(0, len(words)-2):
+            yield (' '.join([words[i], words[i+1], words[i+2]]))
+    yield (' '.join([words[-2], words[-1], '</s>']))
+
 if __name__ == "__main__":
     model = load_pretrained_model('gpt2')
     tokenizer = load_pretrained_tokenizer('gpt2')
