@@ -4,7 +4,7 @@ import pandas as pd
 from candor.create_raw_data import load_conversation_tokens
 
 from candor_control_predictors import ControlPredictors
-from surprisals import *
+
 from utils import *
 
 def load_transcript_output(convo_path: Path):
@@ -70,12 +70,13 @@ def candor_full_df(cliffhanger_df, output_df):
     full_df["position_in_turn"] = full_df.groupby("turn_id").cumcount()
     return full_df.reset_index(drop=True)
 
-def make_df_from_convo_path(convo_path, model, tokenizer, out_path=None, save_type='pickle'):
+def make_df_from_convo_path(convo_path, #model, tokenizer, 
+                            out_path=None, save_type='pickle'):
     # convo_path = Path(convo_path)
     # out_path = Path(out_path)
     cliffhanger_df = load_transcribe_cliffhanger(convo_path)
     output_df = load_transcript_output(convo_path)
-    cliffhanger_exploded = candor_full_df(cliffhanger_df, output_df, model, tokenizer)
+    cliffhanger_exploded = candor_full_df(cliffhanger_df, output_df)#, model, tokenizer)
     if out_path is not None:
         if save_type == 'pickle':
             cliffhanger_exploded.to_pickle(out_path / (convo_path.name + '.pickle'))
@@ -94,64 +95,23 @@ def prepare_candor_text_dfs(full_df):
         all_sentences.append({
             'turn_id': turn_id, 
             'sentence_id_in_turn': sentence_id,
-            'sentence': ' '.join(words)})
+            'text': ' '.join(words)})
 
         for bigram in gen_bigrams(words):
             all_bigrams.append({
             'turn_id': turn_id, 
-            'bigram': bigram})
+            'text': bigram})
 
         for trigram in gen_trigrams(words):
             all_trigrams.append({
             'turn_id': turn_id, 
-            'trigram': trigram})
+            'text': trigram})
 
     text_sentence = pd.DataFrame(all_sentences)
     text_bigram = pd.DataFrame(all_bigrams)
     text_trigram = pd.DataFrame(all_trigrams)
-    return {
-        'text_sentence': text_sentence,
-        'text_bigram': text_bigram,
-        'text_trigram': text_trigram,
-    }
+    return text_sentence, text_bigram, text_trigram
 
-def compute_candor_surprisals(model, tokenizer, cliffhanger_df, input_df, context_size, context_direction):
-    def tokenize_func(tokenizer, text):
-        if context_size == 'sentence':
-            split_text = ['[BOS]'] + text.split(' ') + ['[EOS]']
-        else:
-            split_text = text.split(' ')
-
-        out = tokenizer(
-            split_text,
-            truncation=True,
-            is_split_into_words=True,
-            )
-
-        out['word_ids'] = out.word_ids()
-        # # Sanity check:
-        # for i in range(3):
-        #     print(examples['text'][i])
-        #     print(out['input_ids'][i])
-        #     print(out['word_ids'][i])
-        # assert False
-        return out
-
-    all_surprisals = []
-    
-    for turn_id, group in input_df.groupby('turn_id'):
-        turn_surprisals = []
-        for text in group[context_size]:
-            input = tokenize_func(tokenizer, text)
-            surprisals = calculate_per_word_surprisals(input, model, context_size, context_direction)
-            turn_surprisals.extend(surprisals)
-        all_surprisals.append(turn_surprisals)
-    
-    return all_surprisals
-
-def concat_surprisals_to_full_df(full_df, all_surprisals):
-
-    return 
 
 if __name__ == '__main__':
     # convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
