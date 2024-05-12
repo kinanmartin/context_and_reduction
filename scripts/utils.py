@@ -86,7 +86,7 @@ class BidiDataCollator(DefaultDataCollator):
 
         input_ids = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['input_ids']) for e in bidi_features], batch_first=True, padding_value=0)
         attention_mask = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['attention_mask']) for e in bidi_features], batch_first=True, padding_value=0)
-        labels = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['labels']) for e in bidi_features], batch_first=True, padding_value=-100)  # Assuming -100 is your ignore index
+        labels = torch.nn.utils.rnn.pad_sequence([torch.tensor(e['labels']) for e in bidi_features], batch_first=True, padding_value=-100)
 
         batch = {
             'input_ids': input_ids,
