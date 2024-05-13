@@ -53,21 +53,17 @@ def tokenize_candor_text(text, tokenizer, context_size):
 #         sentences.append(word_level_surprisals)
 #     return sentences
 
-def calculate_surprisal(inputs, model):
+def calculate_surprisal(inputs, model, context_size, context_direction):
     """
     Given a tokenized encoding `inputs` of type 
         transformers.tokenization_utils_base.BatchEncoding
 
     Return a tensor of surprisals for each token.
-
-    Note that len(surprisals) is one less than len(inputs)
-    because of the bos_token: the surprisal value of at
-    index 0 will be hardcoded to float('inf') to match lengths
-
-    TODO: implement has_bos_token arg
     """
     # print(inputs)
     input_ids = inputs['input_ids']
+    if context_direction == 'right':
+        input_ids = input_ids[::-1]
     loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
     
     with torch.no_grad():
@@ -82,7 +78,9 @@ def calculate_surprisal(inputs, model):
         
         surprisals = loss.view(shift_labels.size()).cpu().numpy().tolist()
         
-    surprisals = surprisals[0]
+    surprisals = [None] + surprisals[0]
+    if context_direction == 'right':
+        surprisals.reverse()
     return surprisals
 
 def aggregate_surprisal_by_word(inputs, token_surprisals):
@@ -99,12 +97,11 @@ def aggregate_surprisal_by_word(inputs, token_surprisals):
         token_start, token_end = tokenspan.start, tokenspan.end
         # print(token_surprisals[token_start-1: token_end-1])
         # token_surprisals is missing the 0 index token which corresponds to [BOS], so we index into i-1
-        word_surprisal = sum(token_surprisals[i-1] for i in range(token_start, token_end))
+        word_surprisal = sum(token_surprisals[i] for i in range(token_start, token_end))
         word_surprisals.append(word_surprisal)
     # print(token_surprisals)
     # print(word_surprisals)
     return word_surprisals
-
 
 
 def compute_candor_surprisals(model, tokenizer, 
@@ -121,7 +118,7 @@ def compute_candor_surprisals(model, tokenizer,
     for text in (pbar := tqdm(texts)):
         inputs = tokenize_candor_text(text, tokenizer, context_size)
         # print(text)
-        token_surprisals = calculate_surprisal(inputs, model)
+        token_surprisals = calculate_surprisal(inputs, model, context_size, context_direction)
         # print(token_surprisals)
         word_surprisals = aggregate_surprisal_by_word(inputs, token_surprisals)
         # print(word_surprisals)
