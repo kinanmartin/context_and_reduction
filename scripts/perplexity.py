@@ -126,19 +126,19 @@ if __name__ == "__main__":
     # print(f"Perplexity: {perplexity}")
 
 
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/left_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=left ;
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/right_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=right ;
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt/bidi_sent/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=bidi ;
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt/left_bigram_OLD/checkpoint-59321 --per_device_batch_size=1024 --context_size=bigram --context_direction=left ;
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt/right_bigram_OLD/checkpoint-59321 --per_device_batch_size=1024 --context_size=bigram --context_direction=right ;
-# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_trigram --model_dir=models/gpt/bidi_bigram/checkpoint-100000 --per_device_batch_size=512 --context_size=bigram --context_direction=bidi ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt2/left_sentence/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=left ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt2/right_sentence/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=right ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_sentence --model_dir=models/gpt2/bidi_sentence/checkpoint-76066 --per_device_batch_size=64 --context_size=sentence --context_direction=bidi ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt2/left_bigram/checkpoint-63819 --per_device_batch_size=1024 --context_size=bigram --context_direction=left ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_bigram --model_dir=models/gpt2/right_bigram/checkpoint-63819 --per_device_batch_size=1024 --context_size=bigram --context_direction=right ;
+# python3 scripts/perplexity.py --tokenized_data_dir=data/coca_spoken_detokenized/tokens_trigram --model_dir=models/gpt2/bidi_bigram/checkpoint-100000 --per_device_batch_size=512 --context_size=bigram --context_direction=bidi ;
 
 
-# 55.37468338012695 (wrong original dataset)
-# 178.59422302246094 (wrong original dataset)
+# 54.615543365478516
+# 43.24224090576172
 # 27.41640281677246
-# 71.05626678466797
-# xxx
+# 66.11920166015625
+# 101.02252960205078
 # 30.830102920532227
 
 
