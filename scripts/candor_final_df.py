@@ -59,7 +59,7 @@ def candor_full_df(cliffhanger_df, output_df):
         assert len(output_words) == len(cliffhanger_words), f"output/cliffhanger transcript mismatch:\n{output_words}\n{cliffhanger_words}\n"
         # assert len(cliffhanger_words) == len(surprisals_by_word), f"cliffhanger_words/surprisals_by_word mismatch:\n{cliffhanger_words}\n{surprisals_by_word}\n"
 
-    cliffhanger_df_minimal = cliffhanger_df.loc[:, ['speaker_id', 'turn_id']]
+    cliffhanger_df_minimal = cliffhanger_df.loc[:, ['speaker', 'turn_id']]
     cliffhanger_df_minimal["word"] = cliffhanger_df["utterance"].str.split(' ')
     cliffhanger_df_minimal["word_start"] = row_starts
     cliffhanger_df_minimal["word_stop"] = row_stops
