@@ -197,8 +197,8 @@ def concat_surprisals_to_full_df(full_df: pd.DataFrame,
     return out_df
 
 
-def main(candor_convo_path, model_dir, context_size, context_direction):
-    candor_convo_path = Path(candor_convo_path)
+def main(texts: List[str], model_dir, context_size, context_direction):
+    # candor_convo_path = Path(candor_convo_path)
 
     model = load_pretrained_model(model_dir)
     tokenizer = load_pretrained_tokenizer(
@@ -209,21 +209,9 @@ def main(candor_convo_path, model_dir, context_size, context_direction):
     )
     model.resize_token_embeddings(len(tokenizer))
 
-    full_df = make_df_from_convo_path(candor_convo_path)#, model, tokenizer)#, args.out_path, save_type='csv')
+    # full_df = make_df_from_convo_path(candor_convo_path)#, model, tokenizer)#, args.out_path, save_type='csv')
     
-    text_sentence, text_bigram, text_trigram = prepare_candor_text_dfs(full_df)
-
-    if context_size == 'sentence':
-        texts = text_sentence
-    elif context_size == 'bigram':
-        if context_direction == 'left':
-            texts = text_bigram[~text_bigram.text.str.contains('</s>')]
-        elif context_direction == 'right':
-            texts = text_bigram[~text_bigram.text.str.contains('<s>')]
-        else: # 'bidi'
-            texts = text_trigram
-
-    texts = texts['text'].tolist()
+    # text_sentence, text_bigram, text_trigram = prepare_candor_text_dfs(full_df)
 
     all_surprisals = compute_candor_surprisals(
         model, tokenizer,
