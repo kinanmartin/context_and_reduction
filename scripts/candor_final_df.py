@@ -9,6 +9,9 @@ from utils import *
 from typing import List
 from tqdm import tqdm
 
+import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor
+
 def load_transcript_output(convo_path: Path):
     # convo_path = Path(convo_path)
     output_df = load_conversation_tokens(convo_path)
@@ -79,6 +82,7 @@ def make_df_from_convo_path(convo_path: Path, #model, tokenizer,
     cliffhanger_df = load_transcribe_cliffhanger(convo_path)
     output_df = load_transcript_output(convo_path)
     full_df = candor_full_df(cliffhanger_df, output_df)#, model, tokenizer)
+    full_df['conversation_id'] = str(convo_path.name)
     if out_path is not None:
         if save_type == 'pickle':
             full_df.to_pickle(out_path / (convo_path.name + '.pickle'))
@@ -92,10 +96,41 @@ def make_big_df_from_all_convo_paths(convo_folder_path: Path, #model, tokenizer,
     for convo_path in tqdm(convo_folder_path.iterdir()):
         if convo_path.is_dir():
             df = make_df_from_convo_path(convo_path)
-            df['conversation_id'] = str(convo_path.name)
             dfs.append(df)
         
     big_df = pd.concat(dfs, ignore_index=True)
+    if out_path is not None:
+        if save_type == 'pickle':
+            big_df.to_pickle(out_path / (convo_folder_path.name + '.pickle'))
+        elif save_type == 'csv':
+            big_df.to_csv(out_path / (convo_folder_path.name + '.csv'))
+
+    return big_df
+
+def process_directory(subdir: Path):
+    if subdir.is_dir():  # Check if it is a directory
+        return make_df_from_convo_path(subdir)
+    return None
+
+def multiprocessing_make_big_df_from_all_convo_paths(convo_folder_path: Path, #model, tokenizer, 
+                                                    out_path=None, save_type='pickle'):
+    """Too slow"""
+    dfs = []
+    # Create a process pool with as many processes as there are CPUs
+    with ProcessPoolExecutor() as executor:
+        # Map process_directory function to all subdirectories
+        futures = [executor.submit(process_directory, subdir) for subdir in convo_folder_path.iterdir()]
+
+        progress = tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Processing directories")
+
+        # Collect results as they are completed
+        for future in progress:
+            result = future.result()
+            if result is not None:
+                dfs.append(result)
+    
+    big_df = pd.concat(dfs, ignore_index=True)
+
     if out_path is not None:
         if save_type == 'pickle':
             big_df.to_pickle(out_path / (convo_folder_path.name + '.pickle'))
@@ -154,6 +189,10 @@ def choose_and_convert_text_df_to_list_based_on_context_size_and_direction(text_
 if __name__ == '__main__':
     # convo_path = Path('data/candor/sample/0020a0c5-1658-4747-99c1-2839e736b481/')
     # out_path = Path('data/candor/exploded/')
+
+    candor_outer_path = '/om2/data/public/candor'
+    big_df = make_big_df_from_all_convo_paths(Path(candor_outer_path), out_path=Path('data/candor/'), save_type='csv')
+    assert False
 
     from argparse import ArgumentParser
     parser = ArgumentParser()

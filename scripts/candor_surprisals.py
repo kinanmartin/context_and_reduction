@@ -10,6 +10,9 @@ from candor_final_df import *
 from typing import Dict, List
 # from datasets import Features, Value
 
+import torch.nn.functional as F
+
+import csv
 
 from datasets import disable_caching
 disable_caching()
@@ -45,7 +48,7 @@ def calculate_surprisal(inputs, model, context_size, context_direction):
     loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
     input_ids = torch.tensor([input_ids])
     with torch.no_grad():
-        input_ids = input_ids.to(device)
+        input_ids = input_ids.to(model.device)
         outputs = model(input_ids, labels=input_ids)
         logit_predictions = outputs.logits
         
@@ -135,34 +138,121 @@ def calculate_bidi_sentence_surprisal(inputs, model):
     return loss.item()
 
 
+# def calculate_bidi_sentence_surprisal_batched(inputs, model):
+#     with torch.no_grad():
+#         # Convert input lists to tensors and move to the appropriate device
+#         inputs = {key: torch.tensor(val).to(model.device) for key, val in inputs.items()}
+
+#         # Forward pass through the model to get raw outputs
+#         outputs = model(**inputs)
+
+#         # Obtain the logits from the model's output
+#         logits = outputs.logits  # Assuming logits are [batch_size, sequence_length, num_classes]
+
+#         # Shift logits and labels to align with next-token prediction
+#         shift_logits = logits[..., :-1, :].contiguous()  # Remove the last token for each sequence in logits
+#         shift_labels = inputs['labels'][..., 1:].contiguous()  # Remove the first token for each sequence in labels
+
+#         # Manually compute the CrossEntropyLoss with reduction set to 'none'
+#         # This will compute loss per token, need to aggregate per sequence if required
+#         loss_per_token = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), reduction='none')
+
+#         # Reshape back to [batch_size, sequence_length - 1] and sum across the sequence length to get per-sequence loss
+#         loss_per_sequence = loss_per_token.view(shift_logits.size(0), -1).sum(axis=1)
+
+#         # Convert the tensor of losses to a list of floats
+#         loss_list = loss_per_sequence.tolist()
+
+#     return loss_list
+
+
+def calculate_bidi_sentence_surprisal_batched(inputs, model, max_batch_size=64):
+    # Initialize a list to store all sequence losses
+    all_losses = []
+
+    # Helper function to process a single batch
+    def process_batch(batch_inputs):
+        with torch.no_grad():
+            # Convert input lists to tensors and move to the appropriate device
+            batch_inputs = {key: torch.tensor(val).to(model.device) for key, val in batch_inputs.items()}
+
+            # Forward pass through the model to get raw outputs
+            outputs = model(**batch_inputs)
+
+            # Shift logits and labels for proper next-token prediction
+            shift_logits = outputs.logits[..., :-1, :].contiguous()
+            shift_labels = batch_inputs['labels'][..., 1:].contiguous()
+
+            # Compute loss per token
+            loss_per_token = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), reduction='none')
+
+            # Reshape and sum to get loss per sequence
+            loss_per_sequence = loss_per_token.view(shift_logits.size(0), -1).sum(axis=1)
+
+            # Collect losses
+            all_losses.extend(loss_per_sequence.tolist())
+
+    # Check if batch needs to be split
+    if len(inputs['input_ids']) > max_batch_size:
+        # Split batch into smaller chunks
+        num_splits = (len(inputs['input_ids']) + max_batch_size - 1) // max_batch_size  # This ensures all batches are <= max_batch_size
+        input_splits = {key: torch.tensor(val).chunk(num_splits) for key, val in inputs.items()}
+        for i in range(num_splits):
+            batch_inputs = {key: vals[i].tolist() for key, vals in input_splits.items()}
+            process_batch(batch_inputs)
+    else:
+        # Process the batch as a whole if within the size limit
+        process_batch(inputs)
+
+    return all_losses
+
+
 def compute_candor_surprisals(model, tokenizer, 
                               texts, 
-                              context_size, context_direction):
+                              context_size, context_direction,
+                              save_path,
+                              device=device):
 
     model.eval()
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
 
     if context_size == 'sentence' and context_direction == 'bidi':
         special_tokens_ids = [tokenizer.convert_tokens_to_ids(token) for token in ['[BLANK]', '[FILLER]', '[SEP]']]
 
     all_surprisals = []
+    inputs_too_long = 0
 
     if context_size == 'bigram':
         memo = {}
+
     for text in (pbar := tqdm(texts)):
         if context_size == 'bigram' and text in memo:
             all_surprisals.append(memo[text])
             continue
 
         inputs = tokenize_candor_text(text, tokenizer, context_size)
+
         # print(text)
         if context_size == 'sentence' and context_direction == 'bidi':
-            word_surprisals = []
+            bidi_sentence_batched_inputs = {'input_ids': [], 'attention_mask': [], 'labels': []}
             for bidi_sentence_inputs in gen_all_bidi_inputs(inputs, special_tokens_ids):
-                surprisal = calculate_bidi_sentence_surprisal(bidi_sentence_inputs, model)
-                word_surprisals.append(surprisal)
+                for k, v in bidi_sentence_inputs.items():
+                    bidi_sentence_batched_inputs[k].append(v)
+
+            if len(bidi_sentence_batched_inputs['input_ids'][0]) <= 1024:
+                word_surprisals = calculate_bidi_sentence_surprisal_batched(bidi_sentence_batched_inputs, model)
+            else:
+                inputs_too_long += 1
+                word_surprisals = [None] * len(bidi_sentence_batched_inputs['input_ids'][0])
+
+            # word_surprisals = []
+            # for bidi_sentence_inputs in gen_all_bidi_inputs(inputs, special_tokens_ids):
+            #     if len(bidi_sentence_inputs['input_ids']) <= 1024:
+            #         surprisal = calculate_bidi_sentence_surprisal(bidi_sentence_inputs, model)
+            #     else:
+            #         inputs_too_long += 1
+            #         surprisal = None
+            #     word_surprisals.append(surprisal)
 
         else:
             token_surprisals = calculate_surprisal(inputs, model, context_size, context_direction)
@@ -177,7 +267,13 @@ def compute_candor_surprisals(model, tokenizer,
             # print(word_surprisals)
                 memo[text] = word_surprisals
         
+        if not isinstance(word_surprisals, list):
+            save_to_csv((word_surprisals,), save_path)
+        else:
+            save_to_csv(word_surprisals, save_path)
         all_surprisals.append(word_surprisals)
+
+    print(f'{inputs_too_long=}')
 
     assert len(all_surprisals) == len(texts)
             
@@ -196,8 +292,13 @@ def concat_surprisals_to_full_df(full_df: pd.DataFrame,
 
     return out_df
 
+def save_to_csv(loss_list, file_path):
+    with open(file_path, 'a', newline='') as file:  # Open in append mode
+        writer = csv.writer(file)
+        writer.writerow(loss_list)
 
-def main(texts: List[str], model_dir, context_size, context_direction):
+def main(texts: List[str], model_dir, context_size, context_direction, save_path,
+         device="cuda" if torch.cuda.is_available() else "cpu"):
     # candor_convo_path = Path(candor_convo_path)
 
     model = load_pretrained_model(model_dir)
@@ -214,8 +315,10 @@ def main(texts: List[str], model_dir, context_size, context_direction):
     # text_sentence, text_bigram, text_trigram = prepare_candor_text_dfs(full_df)
 
     all_surprisals = compute_candor_surprisals(
-        model, tokenizer,
+        model, tokenizer, 
         texts, context_size, context_direction,
+        save_path,
+        device=device
     )
 
     # for text, word_surprisals in zip(texts, all_surprisals):
