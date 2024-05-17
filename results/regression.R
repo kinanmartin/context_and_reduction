@@ -6,7 +6,7 @@ library(ggplot2)
 library(lattice)
 
 
-data <- read.csv(here("results", "sample.csv"))
+data <- read.csv(here("results", "sample_with_freq.csv"))
 
 sentence_lengths <- data %>%
   group_by(turn_id, sentence_id_in_turn) %>%
@@ -26,42 +26,40 @@ data$bidi_sentence <- as.numeric(data$bidi_sentence)
 data$left_bigram <- as.numeric(data$left_bigram)
 data$right_bigram <- as.numeric(data$right_bigram)
 data$bidi_bigram <- as.numeric(data$bidi_bigram)
+data$frequency <- as.numeric(data$frequency)
+data$n_syllables <- as.numeric(data$n_syllables)
 
 data$word <- as.factor(data$word)
 
+# model <- lmer(log(duration) ~ left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram + log(frequency) + (1 | word), data = data)
 # model <- lmer(log(duration) ~ left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram + (1 | word), data = data)
 # model <- lm(log(duration) ~ left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram, data = data)
-model <- lm(log(duration) ~ (left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram ) * sentence_length, data = data)
+model <- lm(log(duration) ~ left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram + log(frequency), data = data)
+# model <- lm(log(duration) ~ (left_sentence + right_sentence + bidi_sentence + left_bigram + right_bigram + bidi_bigram ) * sentence_length, data = data)
 
+summary(model)
 # Extract residuals
 residuals <- residuals(model)
 fitted <- fitted(model)
 
-# 1. Residuals vs Fitted Values
 plot(fitted, residuals)
 abline(h = 0, col = "red")
 title("Residuals vs Fitted Values")
 
-# 2. Normal Q-Q Plot
 qqnorm(residuals)
 qqline(residuals, col = "red")
 title("Normal Q-Q Plot")
 
-# 3. Histogram of Residuals
 hist(residuals, breaks = 30, main = "Histogram of Residuals", xlab = "Residuals")
 
-# 4. Scale-Location Plot
 sqrt_abs_resid <- sqrt(abs(residuals))
 plot(fitted, sqrt_abs_resid)
 abline(h = 0, col = "red")
 title("Scale-Location Plot")
 
-# 5. Residuals vs Leverage Plot
-# For mixed models, leverage can be tricky, but for simplicity, we can use cooks.distance
 cooks_d <- cooks.distance(model)
 plot(cooks_d, type = "h", main = "Cook's Distance", ylab = "Cook's Distance")
 
-# # Alternatively, use `ggplot2` for more advanced plots
 # # Residuals vs Fitted
 # ggplot(data.frame(fitted, residuals), aes(x = fitted, y = residuals)) +
 #   geom_point() +
@@ -86,6 +84,7 @@ plot(cooks_d, type = "h", main = "Cook's Distance", ylab = "Cook's Distance")
 #   labs(title = "Scale-Location Plot", x = "Fitted values", y = "sqrt(abs(Residuals))")
 
 # Summary of the model
-summary(model)
+
+
 
 
