@@ -210,7 +210,7 @@ def calculate_bidi_sentence_surprisal_batched(inputs, model, max_batch_size=64):
 def compute_candor_surprisals(model, tokenizer, 
                               texts, 
                               context_size, context_direction,
-                              save_path,
+                              #save_path,
                               device=device):
 
     model.eval()
@@ -267,10 +267,10 @@ def compute_candor_surprisals(model, tokenizer,
             # print(word_surprisals)
                 memo[text] = word_surprisals
         
-        if not isinstance(word_surprisals, list):
-            save_to_csv((word_surprisals,), save_path)
-        else:
-            save_to_csv(word_surprisals, save_path)
+        # if not isinstance(word_surprisals, list):
+        #     save_to_csv((word_surprisals,), save_path)
+        # else:
+        #     save_to_csv(word_surprisals, save_path)
         all_surprisals.append(word_surprisals)
 
     print(f'{inputs_too_long=}')
@@ -297,7 +297,7 @@ def save_to_csv(loss_list, file_path):
         writer = csv.writer(file)
         writer.writerow(loss_list)
 
-def main(texts: List[str], model_dir, context_size, context_direction, save_path,
+def main(texts: List[str], model_dir, context_size, context_direction,# save_path,
          device="cuda" if torch.cuda.is_available() else "cpu"):
     # candor_convo_path = Path(candor_convo_path)
 
@@ -317,7 +317,7 @@ def main(texts: List[str], model_dir, context_size, context_direction, save_path
     all_surprisals = compute_candor_surprisals(
         model, tokenizer, 
         texts, context_size, context_direction,
-        save_path,
+        #save_path,
         device=device
     )
 
